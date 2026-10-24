@@ -1,0 +1,72 @@
+name: CI - Integration
+
+# Python unit tests live in geometry.yml (Dev C). This workflow builds the
+# Node apps once they exist and runs the cross-service demo-path smoke test.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.files.outputs.web }}
+      api: ${{ steps.files.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: files
+        run: |
+          echo "web=$([ -f apps/web/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "api=$([ -f apps/api/package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  web:
+    needs: detect
+    if: needs.detect.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build --workspace apps/web
+        env:
+          VITE_API_BASE_URL: /api/v1
+      - run: npm test --workspace apps/web --if-present -- --run
+      - name: No secrets in the browser bundle
+        run: node scripts/check-bundle-secrets.mjs apps/web/dist
+
+  api:
+    needs: detect
+    if: needs.detect.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build --workspace apps/api --if-present
+      - run: npm test --workspace apps/api --if-present
+      - name: API container builds
+        run: docker build -f apps/api/Dockerfile -t adapt-api:ci .
+
+  e2e-geometry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build and start the geometry container (as Cloud Run would)
+        run: |
+          docker build -f services/geometry/Dockerfile -t adapt-geometry:ci .
+          docker run -d --name geo -p 8000:8080 -e PORT=8080 adapt-geometry:ci
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/health && exit 0; sleep 1; done
+          docker logs geo; exit 1
+      - name: Demo-path smoke test
+        run: node scripts/smoke-e2e.mjs --base-url http://127.0.0.1:8000/api/v1

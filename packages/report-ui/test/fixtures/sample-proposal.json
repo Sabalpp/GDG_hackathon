@@ -1,0 +1,576 @@
+{
+  "goals": [
+    {
+      "id": "goal-doors",
+      "type": "minimum-door-width",
+      "targetMm": 900,
+      "status": "confirmed"
+    },
+    {
+      "id": "goal-kitchen-route",
+      "type": "minimum-path-width",
+      "targetMm": 900,
+      "fromRoomId": "bedroom",
+      "toRoomId": "kitchen",
+      "status": "confirmed"
+    },
+    {
+      "id": "goal-bathroom-route",
+      "type": "reachable-route",
+      "targetMm": 900,
+      "fromRoomId": "bedroom",
+      "toRoomId": "bathroom",
+      "status": "confirmed"
+    }
+  ],
+  "budget": {
+    "currency": "USD",
+    "max": 12000
+  },
+  "proposal": {
+    "id": "proposal:007bc370c9363ea5",
+    "originalLayoutId": "sample-apartment",
+    "resultLayout": {
+      "id": "sample-apartment:proposal:007bc370c9363ea5",
+      "units": "mm",
+      "walls": [
+        {
+          "source": "sample",
+          "id": "wall-north",
+          "start": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "end": {
+            "x": 12000.0,
+            "y": 0.0
+          },
+          "thickness": 100.0,
+          "editable": false
+        },
+        {
+          "source": "sample",
+          "id": "wall-east",
+          "start": {
+            "x": 12000.0,
+            "y": 0.0
+          },
+          "end": {
+            "x": 12000.0,
+            "y": 8000.0
+          },
+          "thickness": 100.0,
+          "editable": false
+        },
+        {
+          "source": "sample",
+          "id": "wall-south",
+          "start": {
+            "x": 12000.0,
+            "y": 8000.0
+          },
+          "end": {
+            "x": 0.0,
+            "y": 8000.0
+          },
+          "thickness": 100.0,
+          "editable": false
+        },
+        {
+          "source": "sample",
+          "id": "wall-west",
+          "start": {
+            "x": 0.0,
+            "y": 8000.0
+          },
+          "end": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "thickness": 100.0,
+          "editable": false
+        },
+        {
+          "source": "sample",
+          "id": "demo-bedroom-partition",
+          "start": {
+            "x": 4000.0,
+            "y": 0.0
+          },
+          "end": {
+            "x": 4000.0,
+            "y": 8000.0
+          },
+          "thickness": 100.0,
+          "editable": true
+        },
+        {
+          "source": "sample",
+          "id": "demo-east-partition",
+          "start": {
+            "x": 6000.0,
+            "y": 0.0
+          },
+          "end": {
+            "x": 6000.0,
+            "y": 8000.0
+          },
+          "thickness": 100.0,
+          "editable": true
+        },
+        {
+          "source": "sample",
+          "id": "wall-between-bedrooms",
+          "start": {
+            "x": 0.0,
+            "y": 4000.0
+          },
+          "end": {
+            "x": 4000.0,
+            "y": 4000.0
+          },
+          "thickness": 100.0,
+          "editable": false
+        },
+        {
+          "source": "sample",
+          "id": "wall-bathroom-kitchen",
+          "start": {
+            "x": 6000.0,
+            "y": 3000.0
+          },
+          "end": {
+            "x": 12000.0,
+            "y": 3000.0
+          },
+          "thickness": 100.0,
+          "editable": false
+        }
+      ],
+      "doors": [
+        {
+          "source": "sample",
+          "id": "door-bedroom",
+          "wallId": "demo-bedroom-partition",
+          "center": {
+            "x": 4000.0,
+            "y": 2000.0
+          },
+          "clearWidth": 920.0,
+          "swing": "sliding",
+          "editable": true
+        },
+        {
+          "source": "sample",
+          "id": "door-bedroom-2",
+          "wallId": "demo-bedroom-partition",
+          "center": {
+            "x": 4000.0,
+            "y": 6000.0
+          },
+          "clearWidth": 1000.0,
+          "swing": "sliding",
+          "editable": true
+        },
+        {
+          "source": "sample",
+          "id": "door-bathroom",
+          "wallId": "demo-east-partition",
+          "center": {
+            "x": 6000.0,
+            "y": 1500.0
+          },
+          "clearWidth": 1000.0,
+          "swing": "sliding",
+          "editable": true
+        },
+        {
+          "source": "sample",
+          "id": "door-kitchen",
+          "wallId": "demo-east-partition",
+          "center": {
+            "x": 6000.0,
+            "y": 5500.0
+          },
+          "clearWidth": 1000.0,
+          "swing": "sliding",
+          "editable": true
+        }
+      ],
+      "objects": [
+        {
+          "source": "sample",
+          "id": "cabinet",
+          "kind": "furniture",
+          "label": "Movable hallway cabinet",
+          "bounds": {
+            "x": 100.0,
+            "y": 1900.0,
+            "width": 1250.0,
+            "height": 2000.0
+          },
+          "movable": true
+        },
+        {
+          "source": "sample",
+          "id": "bed",
+          "kind": "furniture",
+          "label": "Bed",
+          "bounds": {
+            "x": 500.0,
+            "y": 500.0,
+            "width": 1400.0,
+            "height": 1000.0
+          },
+          "movable": true
+        },
+        {
+          "source": "sample",
+          "id": "bed-2",
+          "kind": "furniture",
+          "label": "Second bed",
+          "bounds": {
+            "x": 500.0,
+            "y": 4500.0,
+            "width": 1400.0,
+            "height": 1000.0
+          },
+          "movable": true
+        },
+        {
+          "source": "sample",
+          "id": "vanity",
+          "kind": "fixture",
+          "label": "Fixed bathroom vanity",
+          "bounds": {
+            "x": 10500.0,
+            "y": 500.0,
+            "width": 1000.0,
+            "height": 700.0
+          },
+          "movable": false
+        },
+        {
+          "source": "sample",
+          "id": "counter",
+          "kind": "fixture",
+          "label": "Fixed kitchen counter",
+          "bounds": {
+            "x": 10500.0,
+            "y": 3500.0,
+            "width": 1000.0,
+            "height": 2000.0
+          },
+          "movable": false
+        }
+      ],
+      "rooms": [
+        {
+          "id": "bedroom",
+          "label": "Bedroom",
+          "polygon": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "x": 4000.0,
+              "y": 0.0
+            },
+            {
+              "x": 4000.0,
+              "y": 4000.0
+            },
+            {
+              "x": 0.0,
+              "y": 4000.0
+            }
+          ]
+        },
+        {
+          "id": "bedroom-2",
+          "label": "Second bedroom",
+          "polygon": [
+            {
+              "x": 0.0,
+              "y": 4000.0
+            },
+            {
+              "x": 4000.0,
+              "y": 4000.0
+            },
+            {
+              "x": 4000.0,
+              "y": 8000.0
+            },
+            {
+              "x": 0.0,
+              "y": 8000.0
+            }
+          ]
+        },
+        {
+          "id": "hallway",
+          "label": "Hallway",
+          "polygon": [
+            {
+              "x": 4000.0,
+              "y": 0.0
+            },
+            {
+              "x": 6000.0,
+              "y": 0.0
+            },
+            {
+              "x": 6000.0,
+              "y": 8000.0
+            },
+            {
+              "x": 4000.0,
+              "y": 8000.0
+            }
+          ]
+        },
+        {
+          "id": "bathroom",
+          "label": "Bathroom",
+          "polygon": [
+            {
+              "x": 6000.0,
+              "y": 0.0
+            },
+            {
+              "x": 12000.0,
+              "y": 0.0
+            },
+            {
+              "x": 12000.0,
+              "y": 3000.0
+            },
+            {
+              "x": 6000.0,
+              "y": 3000.0
+            }
+          ]
+        },
+        {
+          "id": "kitchen",
+          "label": "Kitchen / living",
+          "polygon": [
+            {
+              "x": 6000.0,
+              "y": 3000.0
+            },
+            {
+              "x": 12000.0,
+              "y": 3000.0
+            },
+            {
+              "x": 12000.0,
+              "y": 8000.0
+            },
+            {
+              "x": 6000.0,
+              "y": 8000.0
+            }
+          ]
+        }
+      ]
+    },
+    "modifications": [
+      {
+        "id": "resize:door-bedroom",
+        "type": "resize-demo-door",
+        "targetElementId": "door-bedroom",
+        "params": {
+          "clearWidth": 920.0
+        },
+        "requiresProfessionalReview": true
+      },
+      {
+        "id": "move:cabinet",
+        "type": "move-furniture",
+        "targetElementId": "cabinet",
+        "params": {
+          "x": 100.0,
+          "y": 1900.0
+        },
+        "requiresProfessionalReview": false
+      }
+    ],
+    "findingsBefore": [
+      {
+        "id": "integrity:clear",
+        "goalId": "layout-integrity",
+        "verdict": "pass",
+        "affectedElementIds": [],
+        "explanation": "No object overlaps, wall collisions, or out-of-bounds objects."
+      },
+      {
+        "id": "goal-doors:door-bedroom",
+        "goalId": "goal-doors",
+        "verdict": "fail",
+        "measuredMm": 800.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-bedroom"
+        ],
+        "explanation": "Measured door clear width 800 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-doors:door-bedroom-2",
+        "goalId": "goal-doors",
+        "verdict": "pass",
+        "measuredMm": 1000.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-bedroom-2"
+        ],
+        "explanation": "Measured door clear width 1000 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-doors:door-bathroom",
+        "goalId": "goal-doors",
+        "verdict": "pass",
+        "measuredMm": 1000.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-bathroom"
+        ],
+        "explanation": "Measured door clear width 1000 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-doors:door-kitchen",
+        "goalId": "goal-doors",
+        "verdict": "pass",
+        "measuredMm": 1000.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-kitchen"
+        ],
+        "explanation": "Measured door clear width 1000 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-kitchen-route:bedroom:kitchen",
+        "goalId": "goal-kitchen-route",
+        "verdict": "fail",
+        "measuredMm": 649.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "bedroom",
+          "kitchen",
+          "door-bedroom",
+          "cabinet",
+          "bed",
+          "bed-2",
+          "vanity",
+          "counter"
+        ],
+        "explanation": "bedroom \u2192 kitchen: the fixed room anchors are disconnected at the requested width for the 900 mm project target. Clearance lower bound: 649 mm."
+      },
+      {
+        "id": "goal-bathroom-route:bedroom:bathroom",
+        "goalId": "goal-bathroom-route",
+        "verdict": "fail",
+        "measuredMm": 799.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "bedroom",
+          "bathroom",
+          "door-bedroom",
+          "cabinet",
+          "bed",
+          "bed-2",
+          "vanity",
+          "counter"
+        ],
+        "explanation": "bedroom \u2192 bathroom: the fixed room anchors are disconnected at the requested width for the 900 mm project target. Clearance lower bound: 799 mm."
+      }
+    ],
+    "findingsAfter": [
+      {
+        "id": "integrity:clear",
+        "goalId": "layout-integrity",
+        "verdict": "pass",
+        "affectedElementIds": [],
+        "explanation": "No object overlaps, wall collisions, or out-of-bounds objects."
+      },
+      {
+        "id": "goal-doors:door-bedroom",
+        "goalId": "goal-doors",
+        "verdict": "pass",
+        "measuredMm": 920.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-bedroom"
+        ],
+        "explanation": "Measured door clear width 920 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-doors:door-bedroom-2",
+        "goalId": "goal-doors",
+        "verdict": "pass",
+        "measuredMm": 1000.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-bedroom-2"
+        ],
+        "explanation": "Measured door clear width 1000 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-doors:door-bathroom",
+        "goalId": "goal-doors",
+        "verdict": "pass",
+        "measuredMm": 1000.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-bathroom"
+        ],
+        "explanation": "Measured door clear width 1000 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-doors:door-kitchen",
+        "goalId": "goal-doors",
+        "verdict": "pass",
+        "measuredMm": 1000.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "door-kitchen"
+        ],
+        "explanation": "Measured door clear width 1000 mm; project target 900 mm. This is a geometric check only."
+      },
+      {
+        "id": "goal-kitchen-route:bedroom:kitchen",
+        "goalId": "goal-kitchen-route",
+        "verdict": "pass",
+        "measuredMm": 919.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "bedroom",
+          "kitchen"
+        ],
+        "explanation": "bedroom \u2192 kitchen: a connected clearance region exists for the 900 mm project target. Clearance lower bound: 919 mm."
+      },
+      {
+        "id": "goal-bathroom-route:bedroom:bathroom",
+        "goalId": "goal-bathroom-route",
+        "verdict": "pass",
+        "measuredMm": 919.0,
+        "requiredMm": 900.0,
+        "affectedElementIds": [
+          "bedroom",
+          "bathroom"
+        ],
+        "explanation": "bedroom \u2192 bathroom: a connected clearance region exists for the 900 mm project target. Clearance lower bound: 919 mm."
+      }
+    ],
+    "costs": [],
+    "unresolvedQuestions": [
+      "Have a qualified professional verify dimensions, construction, and local requirements.",
+      "Door swings, turning space, thresholds and slopes need separate assessment.",
+      "Cost lines must be attached by the Express API from its illustrative catalog; this geometry service does not assess budget feasibility.",
+      "The 12000 USD budget is recorded but has not been evaluated against costs.",
+      "The planner reached its 96-candidate search limit."
+    ]
+  }
+}

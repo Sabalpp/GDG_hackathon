@@ -11,6 +11,6 @@ htmlcov/
 .DS_Store
 node_modules/
 dist/
-*.egg-info/
 build/
 *.tsbuildinfo
+*.egg-info/

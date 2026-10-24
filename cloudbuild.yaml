@@ -1,0 +1,21 @@
+# Builds one service image from the repository root and pushes it to Artifact Registry.
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_SERVICE=adapt-geometry,_DOCKERFILE=services/geometry/Dockerfile
+substitutions:
+  _REGION: us-central1
+  _REPO: adapt
+  _SERVICE: adapt-geometry
+  _DOCKERFILE: services/geometry/Dockerfile
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - ${_DOCKERFILE}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest
+      - .
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest
+options:
+  logging: CLOUD_LOGGING_ONLY
