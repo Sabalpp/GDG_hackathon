@@ -27,4 +27,4 @@ Room contents are derived from the active layout. Furniture and fixtures are ass
 
 ## Fallbacks
 
-The 3D fallback offers a direct 2D switch. The 2D plan and results remain mounted and keyboard accessible. Cost ranges and measurements are rendered only from supplied proposal and finding fields. `npm test` currently has no configured script; TypeScript and production build are the available automated checks.
+The 3D fallback offers a direct 2D switch. The 2D plan and results remain mounted and keyboard accessible. Cost ranges and measurements are rendered only from supplied proposal and finding fields. `npm test` runs focused tests for room geometry associations and supplied finding verdicts.
