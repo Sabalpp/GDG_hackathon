@@ -1,0 +1,101 @@
+.results-panel {
+  --rp-paper: #fbfaf5;
+  --rp-ink: #292c28;
+  --rp-muted: #6c7069;
+  --rp-line: #d7d6cd;
+  --rp-teal: #8b7044;
+  --rp-terracotta: #a24e39;
+  --rp-amber: #8a631c;
+  color: var(--rp-ink);
+  background: var(--rp-paper);
+  border: 1px solid var(--rp-line);
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.45;
+}
+
+.results-panel *, .results-panel *::before, .results-panel *::after { box-sizing: border-box; }
+.results-panel h2, .results-panel h3, .results-panel h4, .results-panel p { margin-top: 0; }
+.results-panel__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; padding-bottom: 1.5rem; }
+.results-panel__eyebrow, .results-panel__section-head > span, .results-panel__count, .results-panel__goal-status, .results-panel__review-tag, .results-panel__cost-note, .results-panel__footer, .results-panel__print { font-family: 'Trebuchet MS', sans-serif; }
+.results-panel__eyebrow { color: var(--rp-teal); font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; margin-bottom: .65rem; }
+.results-panel h2 { font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 400; line-height: 1.12; margin-bottom: .5rem; }
+.results-panel__intro { color: var(--rp-muted); max-width: 39rem; margin-bottom: 0; }
+.results-panel__print { flex: none; border: 1px solid var(--rp-teal); color: var(--rp-teal); background: transparent; padding: .65rem .9rem; font-weight: 700; cursor: pointer; }
+.results-panel__print:hover { background: #e8f0eb; }
+.results-panel__print:focus-visible, .results-panel__finding-button:focus-visible { outline: 3px solid var(--rp-teal); outline-offset: 2px; }
+.results-panel__print:disabled { opacity: .5; cursor: default; }
+.results-panel__notice { padding: .8rem 1rem; background: #e5efea; border-left: 3px solid var(--rp-teal); margin-bottom: 1rem; }
+.results-panel__notice--error { background: #f8eae3; border-color: var(--rp-terracotta); }
+.results-panel__section { padding: 1.45rem 0; border-top: 1px solid var(--rp-line); break-inside: avoid-page; }
+.results-panel__section-head { display: flex; align-items: baseline; gap: .8rem; margin-bottom: 1rem; }
+.results-panel__disclosure > summary { cursor: pointer; list-style: none; align-items: center; }
+.results-panel__disclosure > summary::-webkit-details-marker { display: none; }
+.results-panel__disclosure > summary::after { content: '−'; margin-left: auto; color: var(--rp-teal); font: 700 1.1rem 'Trebuchet MS', sans-serif; }
+.results-panel__disclosure:not([open]) > summary::after { content: '+'; }
+.results-panel__disclosure > summary:focus-visible { outline: 3px solid var(--rp-teal); outline-offset: 3px; }
+.results-panel__section-head > span { color: var(--rp-teal); font-size: .72rem; font-weight: 700; letter-spacing: .12em; }
+.results-panel__section h3 { font-size: 1.3rem; font-weight: 400; margin: 0; }
+.results-panel__empty, .results-panel__none { color: var(--rp-muted); margin: .5rem 0 0; }
+.results-panel__goals, .results-panel__modifications, .results-panel__costs, .results-panel__findings { list-style: none; padding: 0; margin: 0; }
+.results-panel__goals li { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem 0; border-bottom: 1px solid var(--rp-line); }
+.results-panel__goals li:last-child { border-bottom: 0; }
+.results-panel__goal-status { color: var(--rp-muted); font-size: .78rem; white-space: nowrap; }
+.results-panel__finding-groups { display: grid; gap: .85rem; }
+.results-panel__group { border: 1px solid var(--rp-line); background: #fffdf8; padding: 1rem; break-inside: avoid-page; }
+.results-panel__group--fail { border-left: 4px solid var(--rp-terracotta); }
+.results-panel__group--unknown { border-left: 4px solid var(--rp-amber); }
+.results-panel__group--pass { border-left: 4px solid var(--rp-teal); }
+.results-panel__group-heading { display: flex; gap: .75rem; align-items: start; }
+.results-panel__verdict-mark { display: grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 1px solid currentColor; border-radius: 50%; font-family: 'Trebuchet MS', sans-serif; font-size: .75rem; font-weight: 700; flex: none; }
+.results-panel__group--fail .results-panel__verdict-mark { color: var(--rp-terracotta); }
+.results-panel__group--unknown .results-panel__verdict-mark { color: var(--rp-amber); }
+.results-panel__group--pass .results-panel__verdict-mark { color: var(--rp-teal); }
+.results-panel__group h4 { font-size: 1rem; margin: 0; }
+.results-panel__count { font-size: .75rem; color: var(--rp-muted); margin-left: .2rem; }
+.results-panel__group-heading p { color: var(--rp-muted); font-size: .85rem; margin: .12rem 0 .4rem; }
+.results-panel__findings li + li { border-top: 1px solid var(--rp-line); }
+.results-panel__finding-button, .results-panel__finding-static { width: 100%; display: grid; gap: .24rem; text-align: left; padding: .75rem .2rem; border: 0; background: none; color: inherit; font: inherit; }
+.results-panel__finding-button { cursor: pointer; }
+.results-panel__finding-button:hover, .results-panel__finding-button[aria-pressed='true'] { background: #edf2ed; }
+.results-panel__finding-title { font-weight: 700; }
+.results-panel__measurement, .results-panel__elements { color: var(--rp-muted); font-size: .85rem; }
+.results-panel__modifications li { display: flex; justify-content: space-between; align-items: start; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--rp-line); }
+.results-panel__modifications li:last-child { border-bottom: 0; }
+.results-panel__modifications p { color: var(--rp-muted); margin: .15rem 0 0; }
+.results-panel__review-tag { color: var(--rp-terracotta); border: 1px solid currentColor; padding: .25rem .4rem; font-size: .7rem; white-space: nowrap; }
+.results-panel__parameters { margin: .5rem 0 0; font-size: .82rem; }
+.results-panel__parameters div { display: flex; gap: .4rem; }
+.results-panel__parameters dt { color: var(--rp-muted); text-transform: capitalize; }
+.results-panel__parameters dd { margin: 0; }
+.results-panel__questions { background: #f0efe7; padding: 1rem; margin-top: 1rem; }
+.results-panel__questions h4 { margin-bottom: .4rem; }
+.results-panel__questions p, .results-panel__questions ul { margin-bottom: 0; }
+.results-panel__questions ul { padding-left: 1.2rem; }
+.results-panel__cost-note { color: var(--rp-terracotta); font-size: .77rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.results-panel__costs li { display: flex; justify-content: space-between; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--rp-line); }
+.results-panel__costs li:last-child { border-bottom: 0; }
+.results-panel__costs p { color: var(--rp-muted); margin: .15rem 0 0; font-size: .85rem; }
+.results-panel__costs li > span { font-weight: 700; white-space: nowrap; }
+.results-panel__limitations { background: #e9eee8; border-top: 3px solid var(--rp-teal); padding: 1.2rem; margin-top: 1rem; break-inside: avoid-page; }
+.results-panel__limitations h3 { font-size: 1.2rem; font-weight: 400; margin-bottom: .45rem; }
+.results-panel__limitations p:last-child { margin-bottom: 0; }
+.results-panel__footer { margin-top: 1rem; color: var(--rp-muted); font-size: .72rem; }
+
+@media (max-width: 620px) {
+  .results-panel__header, .results-panel__modifications li, .results-panel__costs li { flex-direction: column; }
+  .results-panel__review-tag { white-space: normal; }
+  .results-panel__goals li { flex-wrap: wrap; }
+}
+
+@media print {
+  @page { margin: 15mm; }
+  body * { visibility: hidden !important; }
+  .results-panel, .results-panel * { visibility: visible !important; }
+  .results-panel { position: absolute; top: 0; left: 0; width: 100%; border: 0; padding: 0; background: white; color: black; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .results-panel__print { display: none !important; }
+  .results-panel__finding-button { cursor: default; }
+  .results-panel__section { break-inside: auto; }
+  .results-panel__disclosure:not([open]) > *:not(summary) { display: block !important; }
+  .results-panel__header { padding-bottom: 1rem; }
+}
