@@ -1,0 +1,24 @@
+[
+  {
+    "id": "goal-doors",
+    "type": "minimum-door-width",
+    "targetMm": 900,
+    "status": "confirmed"
+  },
+  {
+    "id": "goal-kitchen-route",
+    "type": "minimum-path-width",
+    "targetMm": 900,
+    "fromRoomId": "bedroom",
+    "toRoomId": "kitchen",
+    "status": "confirmed"
+  },
+  {
+    "id": "goal-bathroom-route",
+    "type": "reachable-route",
+    "targetMm": 900,
+    "fromRoomId": "bedroom",
+    "toRoomId": "bathroom",
+    "status": "confirmed"
+  }
+]
