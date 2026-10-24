@@ -19,7 +19,7 @@
 
 The workspace's `rendererCapabilities` flags enable controls only after the renderer implements them. `src/App.tsx` currently enables camera presets, exploded view, room focus, and picking for the upgraded `Plan3D` interface. If a renderer is replaced with one lacking a capability, remove the corresponding flag; the control will be disabled and will not suggest that an action occurred.
 
-The workspace remains mounted when changing between 2D and 3D or expanding, so its camera command, comparison, and selection state persist. The renderer should retain its camera across container resizes and layout prop changes where possible. `Proposal.resultLayout` is supplied only when the shared `showAfter` state is true.
+The workspace remains mounted when changing between 2D and 3D or expanding, so its camera command, comparison, and selection state persist. The current renderer refits the camera when its canvas dimensions change, so a manually orbited angle may move toward the active preset during expansion. Preserving an arbitrary orbit through resize requires the renderer to retain its camera transform across canvas size changes. `Proposal.resultLayout` is supplied only when the shared `showAfter` state is true.
 
 ## Room inspector associations
 
