@@ -1,0 +1,13 @@
+export type Verdict = 'pass' | 'fail' | 'unknown'
+export type Point2D = { x: number; y: number }
+export type Rect2D = { x: number; y: number; width: number; height: number }
+export type Wall = { id: string; start: Point2D; end: Point2D; thickness: number; editable: boolean; source?: string; confidence?: number }
+export type Door = { id: string; wallId: string; center: Point2D; clearWidth: number; swing?: 'left' | 'right' | 'sliding'; editable: boolean; source?: string; confidence?: number }
+export type FloorObject = { id: string; kind: 'furniture' | 'fixture'; label: string; bounds: Rect2D; movable: boolean; source?: string; confidence?: number }
+export type Room = { id: string; label: string; polygon: Point2D[] }
+export type Layout = { id: string; units: 'mm'; walls: Wall[]; doors: Door[]; objects: FloorObject[]; rooms: Room[] }
+export type Goal = { id: string; type: 'minimum-door-width' | 'minimum-path-width' | 'reachable-route'; targetMm?: number; fromRoomId?: string; toRoomId?: string; status: 'draft' | 'confirmed' }
+export type ConstraintFinding = { id: string; goalId: string; verdict: Verdict; measuredMm?: number; requiredMm?: number; affectedElementIds: string[]; explanation: string }
+export type Modification = { id: string; type: 'move-furniture' | 'resize-demo-door' | 'move-demo-partition'; targetElementId: string; params: Record<string, string | number>; requiresProfessionalReview: boolean }
+export type CostLine = { modificationId: string; title: string; lowUsd: number; highUsd: number; basis: string; status: 'illustrative' }
+export type Proposal = { id: string; originalLayoutId: string; resultLayout: Layout; modifications: Modification[]; findingsBefore: ConstraintFinding[]; findingsAfter: ConstraintFinding[]; costs: CostLine[]; unresolvedQuestions: string[] }
