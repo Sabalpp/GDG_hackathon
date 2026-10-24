@@ -51,7 +51,7 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run build --workspace apps/api --if-present
-      - run: npm test --workspace apps/api --if-present -- --run
+      - run: npm test --workspace apps/api --if-present
       - name: API container builds
         run: docker build -f apps/api/Dockerfile -t adapt-api:ci .
 

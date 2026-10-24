@@ -47,7 +47,7 @@ A 5,000 mm request intentionally stays failing.
 | `packages/report-ui` | Accessible findings, before/after, cost and printable report panels | Dev D |
 | `data/` | Canonical sample layout, goals, request fixtures, cost catalog | shared |
 | `scripts/` | End-to-end smoke test, bundle secret check, deploy script | Dev D |
-| `docs/` | [Architecture](docs/architecture.md), [geometry contract](docs/geometry-integration.md), [deployment](docs/deployment.md), [demo script](docs/demo-script.md), [safety & limitations](docs/safety-limitations.md), [evaluation](docs/evaluation.md) | shared |
+| `docs/` | **[Team integration checklist](docs/team-integration.md)**, [architecture](docs/architecture.md), [geometry contract](docs/geometry-integration.md), [deployment](docs/deployment.md), [demo script](docs/demo-script.md), [safety & limitations](docs/safety-limitations.md), [evaluation](docs/evaluation.md) | shared |
 
 ## Run it locally
 
