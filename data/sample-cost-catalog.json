@@ -1,0 +1,36 @@
+{
+  "updatedAt": "2026-10-24",
+  "currency": "USD",
+  "status": "illustrative",
+  "limitations": [
+    "Every range below is a fictional planning placeholder for the hackathon demo, not a market quote or researched price.",
+    "Local labor rates, permits, structural findings, hazardous materials, and finishes can change real costs substantially.",
+    "Totals are summed from this table by code. No AI model authors or adjusts these numbers."
+  ],
+  "items": [
+    {
+      "type": "move-furniture",
+      "title": "Rearrange movable furniture",
+      "lowUsd": 0,
+      "highUsd": 200,
+      "basis": "Illustrative placeholder: self-move or a few hours of help. Not a market quote.",
+      "requiresProfessionalReview": false
+    },
+    {
+      "type": "resize-demo-door",
+      "title": "Widen a doorway (concept)",
+      "lowUsd": 800,
+      "highUsd": 3500,
+      "basis": "Illustrative placeholder: new frame, door slab, trim and patching. Structural, electrical and permit factors vary and are not included.",
+      "requiresProfessionalReview": true
+    },
+    {
+      "type": "move-demo-partition",
+      "title": "Relocate a non-load-bearing partition (concept)",
+      "lowUsd": 3000,
+      "highUsd": 12000,
+      "basis": "Illustrative placeholder only. The geometry planner does not currently generate this edit; real structural status must be confirmed by a professional.",
+      "requiresProfessionalReview": true
+    }
+  ]
+}

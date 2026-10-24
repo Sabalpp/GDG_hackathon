@@ -1,0 +1,19 @@
+{
+  "name": "adapt",
+  "private": true,
+  "description": "ADAPT: AI-assisted home accessibility redesign (hackathon concept tool)",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "smoke": "node scripts/smoke-e2e.mjs",
+    "smoke:geometry": "node scripts/smoke-e2e.mjs --base-url http://127.0.0.1:8000/api/v1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
