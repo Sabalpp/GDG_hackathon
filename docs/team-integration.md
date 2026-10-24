@@ -56,9 +56,21 @@ Manager), `GEMMA_MODEL`, `GEOMETRY_BASE_URL`, `WEB_ORIGIN`, `PROJECT_STORE`, `AD
 
 ## Dev A (web)
 
-- [ ] Scaffold with `npm create vite@latest apps/web -- --template react-ts`, then run `npm install` **from the root**.
-- [ ] Use **`import.meta.env.VITE_API_BASE_URL`** for every call. Locally it's `http://localhost:8080/api/v1`; in production
-  the deploy script builds with `/api/v1`. Don't hardcode hosts.
+**Done for you on `feat/web-integration`:** your `feat/complete-3d-experience` work now lives in `apps/web`
+(your commits and authorship are kept). Changes on top of it:
+
+- `src/api/adaptApi.ts` calls the spec paths (`/samples/apartment`, `/requirements/interpret`, `/layouts/validate`,
+  `/proposals/generate`) and unwraps their `{layout}`, `{findings}` and `{proposals}` responses. It maps Dev B's
+  category goals onto geometry goals, sends the budget, and fills `costs` from the shared catalog if the API didn't.
+- `src/data/sampleLayout.ts` re-exports the canonical `data/sample-layout.json`, so the offline demo and the services draw the same apartment.
+- `npm run dev:full` points at the real services through the Vite proxy (`vite.config.ts`). Plain `npm run dev` stays offline.
+- "Open full report" in the review stage shows `<AdaptReport>` from `@adapt/report-ui` in a print-ready dialog.
+- Path goals now show their from/to room pickers, not just reachable-route goals.
+- Fixed garbled characters in `App.tsx` (the file had been saved with a broken encoding). Please keep your editor on UTF-8.
+
+**Pull `main` after that PR merges and keep building in `apps/web`.** Remaining notes:
+
+- [ ] Use **`import.meta.env.VITE_API_BASE_URL`** (or `dev:full`) for every call. Don't hardcode hosts.
 - [ ] **Use my report panels** instead of building your own findings, cost, or report UI:
   ```tsx
   import { AdaptReport, FindingsPanel } from '@adapt/report-ui';

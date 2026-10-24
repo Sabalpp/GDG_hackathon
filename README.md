@@ -78,9 +78,14 @@ npm run dev --workspace apps/api
 ```
 
 ```bash
-# 3. Web
-npm run dev --workspace apps/web       # http://localhost:5173
+# 3. Web, wired to the real services through the Vite proxy
+npm run dev:full --workspace apps/web  # http://localhost:5173
 ```
+
+`npm run dev --workspace apps/web` (without `:full`) runs an offline demo with no services. The dev proxy
+sends `/api/v1/requirements` and `/api/v1/catalog` to Express (`DEV_API_URL`, default `http://localhost:8080`)
+and everything else to geometry (`DEV_GEOMETRY_URL`, default `http://127.0.0.1:8000`). Set
+`DEV_ROUTE_ALL_TO_API=1` once Express forwards validate/generate itself.
 
 No Python? Run the geometry service in Docker instead:
 

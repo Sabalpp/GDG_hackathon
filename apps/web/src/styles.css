@@ -12,3 +12,13 @@ body{background:var(--paper)}
 @media(max-width:1100px){.workspace{grid-template-columns:minmax(0,1fr) 34px minmax(250px,290px)}.immersive-workspace__stage{grid-template-columns:minmax(0,1fr)!important}.immersive-workspace__inspector{border-left:0;border-top:1px solid #d5d3c9}.immersive-workspace__inspector-body{max-height:260px}.immersive-workspace__inspector--collapsed{width:auto}.immersive-workspace__inspector--collapsed .immersive-workspace__inspector-head{writing-mode:initial}}
 @media(max-width:850px){.workspace,.workspace:has(.side-panel--collapsed){grid-template-columns:1fr;gap:8px}.workspace__sidebar-toggle{writing-mode:initial;min-height:0;padding:11px}.side-panel{max-width:none}.side-panel--collapsed{display:none}}
 @media print{.workspace__sidebar-toggle{display:none!important}.side-panel--collapsed{display:block!important}}
+
+/* Full report dialog (packages/report-ui). Printing while it is open prints only the report. */
+.report-dialog { width: min(64rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 1.25rem; border: 0; border-radius: 12px; background: var(--adapt-bg); color: var(--adapt-text); }
+.report-dialog::backdrop { background: rgb(20 18 14 / 0.55); }
+.report-dialog__close { float: right; font: inherit; padding: 0.5rem 0.9rem; min-height: 2.75rem; border-radius: 6px; border: 1px solid var(--adapt-border); background: var(--adapt-surface); color: var(--adapt-text); cursor: pointer; }
+@media print {
+  body:has(.report-dialog[open]) .app-shell > :not(main),
+  body:has(.report-dialog[open]) main > :not(.report-dialog) { display: none !important; }
+  .report-dialog[open] { position: static; width: auto; max-height: none; padding: 0; overflow: visible; }
+}

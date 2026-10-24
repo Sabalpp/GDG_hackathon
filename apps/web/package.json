@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:full": "vite --host 0.0.0.0 --mode full",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test tests/roomInspectorData.test.ts tests/Plan3DGeometry.test.mjs"
   },
   "dependencies": {
+    "@adapt/report-ui": "*",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "react": "^19.2.0",

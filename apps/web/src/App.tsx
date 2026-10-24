@@ -1,4 +1,6 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AdaptReport } from '@adapt/report-ui'
+import '@adapt/report-ui/styles.css'
 import { adapterMode, generateProposal, interpretRequest, loadSample, validateLayout } from './api/adaptApi'
 import type { Goal } from './contracts'
 import { Plan2D } from './components/Plan2D'
@@ -29,7 +31,7 @@ function GoalEditor({ goal }: { goal: Goal }) {
     {goal.type !== 'reachable-route' && <label>Target width <span className="unit">mm</span>
       <input type="number" min="1" step="10" value={goal.targetMm ?? ''} onChange={(event) => set({ targetMm: event.target.value ? Number(event.target.value) : undefined })} />
     </label>}
-    {goal.type === 'reachable-route' && <div className="goal-route">
+    {goal.type !== 'minimum-door-width' && <div className="goal-route">
       <label>From room<select value={goal.fromRoomId ?? ''} onChange={(event) => set({ fromRoomId: event.target.value || undefined })}><option value="">Select room</option>{state.layout?.rooms.map((room) => <option value={room.id} key={room.id}>{room.label}</option>)}</select></label>
       <label>To room<select value={goal.toRoomId ?? ''} onChange={(event) => set({ toRoomId: event.target.value || undefined })}><option value="">Select room</option>{state.layout?.rooms.map((room) => <option value={room.id} key={room.id}>{room.label}</option>)}</select></label>
     </div>}
@@ -44,6 +46,9 @@ function Experience() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [model, setModel] = useState<string>()
+  const reportRef = useRef<HTMLDialogElement>(null)
+  const budget = state.budgetUsd.trim() ? Number(state.budgetUsd) : undefined
   const activeLayout = selectActiveLayout(state)
   const activeFindings = selectActiveFindings(state)
   const confirmed = selectAllGoalsConfirmed(state)
@@ -67,16 +72,18 @@ function Experience() {
     try {
       if (kind === 'interpret') {
         if (!state.description.trim()) throw new Error('Describe what you would like to change first.')
-        const goals = await interpretRequest(state.description.trim())
-        dispatch({ type: 'replace-draft-goals', value: goals })
-        setNotice('Review and confirm these draft goals before checking the plan.')
+        if (!state.layout) throw new Error('The sample layout is not loaded.')
+        const result = await interpretRequest(state.description.trim(), state.layout)
+        dispatch({ type: 'replace-draft-goals', value: result.goals })
+        setModel(result.model)
+        setNotice(['Review and confirm these draft goals before checking the plan.', ...result.warnings, ...result.questions].join(' '))
       } else {
         if (!state.layout) throw new Error('The sample layout is not loaded.')
         if (!confirmed) throw new Error('Confirm your goals before running the model.')
         if (kind === 'validate') {
           dispatch({ type: 'findings', value: await validateLayout(state.layout, state.goals) })
         } else {
-          dispatch({ type: 'proposal', value: await generateProposal(state.layout, state.goals) })
+          dispatch({ type: 'proposal', value: await generateProposal(state.layout, state.goals, budget) })
         }
       }
     } catch (cause) {
@@ -87,7 +94,7 @@ function Experience() {
   return <div className="app-shell">
     <header className="masthead">
       <div className="brand" aria-label="ADAPT home"><span className="brand-icon">A</span><span>ADAPT<small>SPACE FOR EVERY BODY</small></span></div>
-      <div className="masthead__right"><span className="edition">Concept planning studio <span>Ãƒâ€šÃ‚Â·</span> 001</span><span className="sample-badge">SAMPLE PROJECT</span></div>
+      <div className="masthead__right"><span className="edition">Concept planning studio <span>·</span> 001</span><span className="sample-badge">SAMPLE PROJECT</span></div>
     </header>
     <main>
       <div className="intro">
@@ -97,8 +104,8 @@ function Experience() {
       <nav className="stages" aria-label="Planning stages">
         {(['plan', 'goals', 'review'] as Stage[]).map((stage, index) => <button key={stage} type="button" className={state.stage === stage ? 'active' : ''} onClick={() => dispatch({ type: 'stage', value: stage })} aria-current={state.stage === stage ? 'step' : undefined}><span>0{index + 1}</span>{stageLabels[stage]}</button>)}
       </nav>
-      {adapterMode === 'local-demo' && <div className="demo-banner" role="note"><strong>Local sample mode.</strong> Doorway width checks and a bounded doorway concept edit use calibrated demo data. AI interpretation, path measurement, and cost estimates are unavailable.</div>}
-      {error && <div className="message message--error" role="alert">{error}<button type="button" aria-label="Dismiss error" onClick={() => setError(null)}>ÃƒÆ’Ã¢â‚¬â€</button></div>}
+      {adapterMode === 'local-demo' && <div className="demo-banner" role="note"><strong>Local sample mode.</strong> Doorway width checks and a bounded doorway concept edit use calibrated demo data. AI interpretation and path measurement are unavailable. Run <code>npm run dev:full</code> with the API and geometry services for real checks.</div>}
+      {error && <div className="message message--error" role="alert">{error}<button type="button" aria-label="Dismiss error" onClick={() => setError(null)}>×</button></div>}
       {notice && <div className="message" role="status">{notice}</div>}
 
       <div className="workspace">
@@ -124,11 +131,23 @@ function Experience() {
         </div>
         <button className="workspace__sidebar-toggle" type="button" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>{sidebarOpen ? 'Hide planning panel' : 'Show planning panel'}</button>
         <aside className={`side-panel ${sidebarOpen ? '' : 'side-panel--collapsed'}`} aria-label="Planning controls">
-          {state.stage === 'plan' && <div className="panel-content"><p className="eyebrow">Getting started</p><h2>Start with a real question.</h2><p>This sample apartment is ready to explore. Its coordinates and doorway width are specified in millimeters.</p><div className="stat-pair"><div><strong>{state.layout?.rooms.length ?? 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}</strong><span>rooms</span></div><div><strong>{state.layout?.doors.length ?? 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}</strong><span>modeled doorway</span></div></div><button className="primary-button" type="button" onClick={() => dispatch({ type: 'stage', value: 'goals' })}>Set your goals <span>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â€</span></button><p className="fine-print">This is a sample only. Real-home measurements and site conditions are not verified.</p></div>}
-          {state.stage === 'goals' && <div className="panel-content"><p className="eyebrow">Your priorities</p><h2>What would make this space easier?</h2><label className="field-label" htmlFor="description">Describe your needs in your own words</label><textarea id="description" rows={3} placeholder="For example, I need a wider bathroom doorwayÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" value={state.description} onChange={(event) => dispatch({ type: 'description', value: event.target.value })} /><button className="secondary-button" type="button" onClick={() => void run('interpret')} disabled={busy !== null || adapterMode === 'local-demo'}>Interpret request</button>{adapterMode === 'local-demo' && <p className="field-help">AI interpretation is unavailable in local sample mode. Add and edit structured goals manually.</p>}<label className="field-label" htmlFor="budget">Optional planning budget <span>USD</span></label><input id="budget" type="number" min="0" placeholder="e.g. 5000" value={state.budgetUsd} onChange={(event) => dispatch({ type: 'budget', value: event.target.value })} /><p className="field-help">For your reference only; no cost estimate is generated from this entry.</p><div className="goal-heading"><h3>Structured goals</h3><button type="button" className="add-button" onClick={() => dispatch({ type: 'add-goal', value: newGoal() })}>+ Add goal</button></div>{state.goals.length === 0 && <p className="empty-note">No goals yet. Add a structured goal to check the model.</p>}{state.goals.map((goal) => <GoalEditor key={goal.id} goal={goal} />)}{state.goals.length > 0 && <><button className="primary-button" type="button" disabled={!validGoals || confirmed} onClick={() => dispatch({ type: 'confirm-goals' })}>{confirmed ? 'Goals confirmed' : 'Confirm goals'} <span>ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“</span></button><p className="field-help">Editing a goal returns it to draft and clears prior findings.</p></>}{confirmed && <button className="secondary-button full-width" type="button" disabled={busy !== null} onClick={() => void run('validate')}>{busy === 'validate' ? 'CheckingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : 'Check the sample plan'}</button>}</div>}
-          {state.stage === 'review' && <div className="panel-content"><p className="eyebrow">The model check</p><h2>What the plan shows.</h2><ResultsPanel goals={state.goals} findingsBefore={state.findingsBefore} proposal={state.proposal} layout={state.layout} selectedFindingId={state.selectedFindingId} onSelectFinding={(id) => { dispatch({ type: 'selected-finding', id }); const finding = activeFindings?.find((item) => item.id === id); dispatch({ type: 'selected-element', id: finding?.affectedElementIds[0] }) }} />{confirmed && <button className="primary-button" type="button" disabled={busy !== null || !state.layout} onClick={() => void run('generate')}>{busy === 'generate' ? 'PreparingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : state.proposal ? 'Regenerate concept' : 'Explore a concept'} <span>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â€</span></button>}{state.proposal && <p className="field-help">The after view reflects the proposal data. Construction-related edits require qualified professional review.</p>}{!confirmed && <button className="secondary-button full-width" type="button" onClick={() => dispatch({ type: 'stage', value: 'goals' })}>Add and confirm goals</button>}</div>}
+          {state.stage === 'plan' && <div className="panel-content"><p className="eyebrow">Getting started</p><h2>Start with a real question.</h2><p>This sample apartment is ready to explore. Its coordinates and doorway width are specified in millimeters.</p><div className="stat-pair"><div><strong>{state.layout?.rooms.length ?? '—'}</strong><span>rooms</span></div><div><strong>{state.layout?.doors.length ?? '—'}</strong><span>modeled doorway</span></div></div><button className="primary-button" type="button" onClick={() => dispatch({ type: 'stage', value: 'goals' })}>Set your goals <span>→</span></button><p className="fine-print">This is a sample only. Real-home measurements and site conditions are not verified.</p></div>}
+          {state.stage === 'goals' && <div className="panel-content"><p className="eyebrow">Your priorities</p><h2>What would make this space easier?</h2><label className="field-label" htmlFor="description">Describe your needs in your own words</label><textarea id="description" rows={3} placeholder="For example, I need a wider bathroom doorway…" value={state.description} onChange={(event) => dispatch({ type: 'description', value: event.target.value })} /><button className="secondary-button" type="button" onClick={() => void run('interpret')} disabled={busy !== null || adapterMode === 'local-demo'}>Interpret request</button>{adapterMode === 'local-demo' && <p className="field-help">AI interpretation is unavailable in local sample mode. Add and edit structured goals manually.</p>}<label className="field-label" htmlFor="budget">Optional planning budget <span>USD</span></label><input id="budget" type="number" min="0" placeholder="e.g. 5000" value={state.budgetUsd} onChange={(event) => dispatch({ type: 'budget', value: event.target.value })} /><p className="field-help">Compared only against illustrative catalog ranges. Not a quote.</p><div className="goal-heading"><h3>Structured goals</h3><button type="button" className="add-button" onClick={() => dispatch({ type: 'add-goal', value: newGoal() })}>+ Add goal</button></div>{state.goals.length === 0 && <p className="empty-note">No goals yet. Add a structured goal to check the model.</p>}{state.goals.map((goal) => <GoalEditor key={goal.id} goal={goal} />)}{state.goals.length > 0 && <><button className="primary-button" type="button" disabled={!validGoals || confirmed} onClick={() => dispatch({ type: 'confirm-goals' })}>{confirmed ? 'Goals confirmed' : 'Confirm goals'} <span>✓</span></button><p className="field-help">Editing a goal returns it to draft and clears prior findings.</p></>}{confirmed && <button className="secondary-button full-width" type="button" disabled={busy !== null} onClick={() => void run('validate')}>{busy === 'validate' ? 'Checking…' : 'Check the sample plan'}</button>}</div>}
+          {state.stage === 'review' && <div className="panel-content"><p className="eyebrow">The model check</p><h2>What the plan shows.</h2><ResultsPanel goals={state.goals} findingsBefore={state.findingsBefore} proposal={state.proposal} layout={state.layout} selectedFindingId={state.selectedFindingId} onSelectFinding={(id) => { dispatch({ type: 'selected-finding', id }); const finding = activeFindings?.find((item) => item.id === id); dispatch({ type: 'selected-element', id: finding?.affectedElementIds[0] }) }} />{confirmed && <button className="primary-button" type="button" disabled={busy !== null || !state.layout} onClick={() => void run('generate')}>{busy === 'generate' ? 'Preparing…' : state.proposal ? 'Regenerate concept' : 'Explore a concept'} <span>→</span></button>}{state.proposal && <p className="field-help">The after view reflects the proposal data. Construction-related edits require qualified professional review.</p>}{state.proposal && <button className="secondary-button full-width" type="button" onClick={() => reportRef.current?.showModal()}>Open full report</button>}{!confirmed && <button className="secondary-button full-width" type="button" onClick={() => dispatch({ type: 'stage', value: 'goals' })}>Add and confirm goals</button>}</div>}
         </aside>
       </div>
+      <dialog ref={reportRef} className="report-dialog" aria-label="Full concept report">
+        <button className="report-dialog__close adapt-no-print" type="button" onClick={() => reportRef.current?.close()}>Close report</button>
+        {state.proposal && <AdaptReport
+          proposal={state.proposal}
+          goals={state.goals}
+          originalLayout={state.layout}
+          budget={budget !== undefined && Number.isFinite(budget) ? { currency: 'USD', max: budget } : null}
+          description={state.description.trim() || undefined}
+          model={model}
+          onSelectElement={(id) => { dispatch({ type: 'selected-element', id }); reportRef.current?.close() }}
+        />}
+      </dialog>
       <footer className="page-footer"><span>ADAPT / SAMPLE STUDY</span><p>Concept planning only. ADAPT does not determine code compliance, structural safety, medical suitability, construction feasibility, or contractor pricing. Qualified professionals must review construction-related work.</p></footer>
     </main>
   </div>
