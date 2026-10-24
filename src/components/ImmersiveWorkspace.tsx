@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
-import type { ConstraintFinding, Layout, Point2D, Proposal } from '../contracts'
+import type { ConstraintFinding, Layout, Proposal } from '../contracts'
+import { roomContents, roomFindings } from './roomInspectorData'
 import './ImmersiveWorkspace.css'
 
 export type CameraPreset = 'overview' | 'top' | 'entry' | 'eye-level'
@@ -46,36 +47,6 @@ export type ImmersiveWorkspaceProps = {
   loading?: boolean
 }
 
-function pointOnSegment(point: Point2D, start: Point2D, end: Point2D, tolerance = 2): boolean {
-  const length = Math.hypot(end.x - start.x, end.y - start.y)
-  if (length === 0) return Math.hypot(point.x - start.x, point.y - start.y) <= tolerance
-  const projection = ((point.x - start.x) * (end.x - start.x) + (point.y - start.y) * (end.y - start.y)) / (length * length)
-  if (projection < 0 || projection > 1) return false
-  return Math.hypot(point.x - (start.x + projection * (end.x - start.x)), point.y - (start.y + projection * (end.y - start.y))) <= tolerance
-}
-
-function inRoom(point: Point2D, polygon: Point2D[]): boolean {
-  if (polygon.length < 3) return false
-  for (let index = 0; index < polygon.length; index++) {
-    if (pointOnSegment(point, polygon[index], polygon[(index + 1) % polygon.length])) return true
-  }
-  let inside = false
-  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
-    const a = polygon[index]
-    const b = polygon[previous]
-    if ((a.y > point.y) !== (b.y > point.y) && point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x) inside = !inside
-  }
-  return inside
-}
-
-function roomContents(layout: Layout, roomId: string) {
-  const room = layout.rooms.find((item) => item.id === roomId)
-  if (!room) return { doors: [], objects: [], ids: [roomId] }
-  const doors = layout.doors.filter((door) => inRoom(door.center, room.polygon))
-  const objects = layout.objects.filter((object) => inRoom({ x: object.bounds.x + object.bounds.width / 2, y: object.bounds.y + object.bounds.height / 2 }, room.polygon))
-  return { doors, objects, ids: [roomId, ...doors.map((door) => door.id), ...objects.map((object) => object.id)] }
-}
-
 function statusLabel(verdict: ConstraintFinding['verdict']) {
   return verdict === 'pass' ? 'Passed in this model' : verdict === 'fail' ? 'Needs attention' : 'Unknown / not measured'
 }
@@ -100,7 +71,7 @@ export function ImmersiveWorkspace({ layout, proposal, findings, view, showAfter
   }, [layout, selectedElementId])
   const selectedRoom = layout?.rooms.find((room) => room.id === selectedRoomId)
   const contents = layout && selectedRoom ? roomContents(layout, selectedRoom.id) : undefined
-  const roomFindings = findings?.filter((finding) => contents?.ids.some((id) => finding.affectedElementIds.includes(id))) ?? []
+  const relatedFindings = roomFindings(findings, contents?.ids ?? [])
   const modifications = proposal?.modifications ?? []
 
   useEffect(() => {
@@ -181,7 +152,7 @@ export function ImmersiveWorkspace({ layout, proposal, findings, view, showAfter
             </div>
             <div className="immersive-workspace__inspector-section"><h4>Doorways <span>{contents.doors.length}</span></h4>{contents.doors.length ? <ul>{contents.doors.map((door) => <li key={door.id}><button type="button" onClick={() => onSelectElement(door.id)}>{door.id}</button><span>{door.clearWidth.toLocaleString()} mm supplied width</span></li>)}</ul> : <p>None in the supplied layout.</p>}</div>
             <div className="immersive-workspace__inspector-section"><h4>Furniture & fixtures <span>{contents.objects.length}</span></h4>{contents.objects.length ? <ul>{contents.objects.map((object) => <li key={object.id}><button type="button" onClick={() => onSelectElement(object.id)}>{object.label}</button><span>{object.kind}</span></li>)}</ul> : <p>None in the supplied layout.</p>}</div>
-            <div className="immersive-workspace__inspector-section"><h4>Model findings <span>{roomFindings.length}</span></h4>{roomFindings.length ? <ul>{roomFindings.map((finding) => <li key={finding.id} className={`immersive-workspace__finding immersive-workspace__finding--${finding.verdict}`}><strong>{statusLabel(finding.verdict)}</strong><span>{finding.explanation}</span>{(finding.measuredMm !== undefined || finding.requiredMm !== undefined) && <small>{finding.measuredMm !== undefined ? `Measured ${finding.measuredMm.toLocaleString()} mm` : ''}{finding.measuredMm !== undefined && finding.requiredMm !== undefined ? ' · ' : ''}{finding.requiredMm !== undefined ? `Goal ${finding.requiredMm.toLocaleString()} mm` : ''}</small>}</li>)}</ul> : <p>No findings are associated with this room's modeled elements.</p>}</div>
+            <div className="immersive-workspace__inspector-section"><h4>Model findings <span>{relatedFindings.length}</span></h4>{relatedFindings.length ? <ul>{relatedFindings.map((finding) => <li key={finding.id} className={`immersive-workspace__finding immersive-workspace__finding--${finding.verdict}`}><strong>{statusLabel(finding.verdict)}</strong><span>{finding.explanation}</span>{(finding.measuredMm !== undefined || finding.requiredMm !== undefined) && <small>{finding.measuredMm !== undefined ? `Measured ${finding.measuredMm.toLocaleString()} mm` : ''}{finding.measuredMm !== undefined && finding.requiredMm !== undefined ? ' · ' : ''}{finding.requiredMm !== undefined ? `Goal ${finding.requiredMm.toLocaleString()} mm` : ''}</small>}</li>)}</ul> : <p>No findings are associated with this room's modeled elements.</p>}</div>
           </> : <><h3>Select a room</h3><p>Choose a room below or in the plan to inspect its modeled contents and findings.</p></>}
           <div className="immersive-workspace__room-list" role="group" aria-label="Choose a room">{layout?.rooms.map((room) => <button key={room.id} type="button" aria-pressed={selectedRoomId === room.id} onClick={() => chooseRoom(room.id)}>{room.label}<span>↗</span></button>)}</div>
         </div>}
@@ -192,7 +163,7 @@ export function ImmersiveWorkspace({ layout, proposal, findings, view, showAfter
       {proposal && <div className="immersive-workspace__compare" role="group" aria-label="Compare apartment layouts"><span>Compare</span><button type="button" aria-pressed={!showAfter} onClick={() => onShowAfterChange(false)}>Before <small>current</small></button><button type="button" aria-pressed={showAfter} onClick={() => onShowAfterChange(true)}>After <small>concept</small></button></div>}
       <div className="immersive-workspace__meta"><span>{layout ? `${layout.rooms.length} rooms · ${layout.doors.length} modeled doorway${layout.doors.length === 1 ? '' : 's'}` : 'Layout unavailable'}</span><span>Simplified visualization · not a construction model</span></div>
     </div>
-    {proposal && <details className="immersive-workspace__changes"><summary>Proposed modification highlights <span>{modifications.length}</span></summary>{modifications.length ? <ul>{modifications.map((modification) => <li key={modification.id}><strong>{modification.type.replaceAll('-', ' ')}</strong><span>{modification.targetElementId}</span>{modification.requiresProfessionalReview && <em>Professional review required</em>}</li>)}</ul> : <p>No modifications are supplied with this proposal.</p>}</details>}
+    {proposal && <details className="immersive-workspace__changes"><summary>Proposed modification highlights <span>{modifications.length}</span></summary>{modifications.length ? <ul>{modifications.map((modification) => <li key={modification.id}><button type="button" aria-pressed={selectedElementId === modification.targetElementId} onClick={() => onSelectElement(modification.targetElementId)}><strong>{modification.type.replaceAll('-', ' ')}</strong><span>{modification.targetElementId}</span></button>{modification.requiresProfessionalReview && <em>Professional review required</em>}</li>)}</ul> : <p>No modifications are supplied with this proposal.</p>}</details>}
   </section>
 }
 
