@@ -9,7 +9,7 @@ const range = { lowUsd: money, highUsd: money };
 const ordered = (value: { lowUsd: number; highUsd: number }) => value.lowUsd <= value.highUsd;
 export const costCatalogItemSchema = z.strictObject({
   type: z.enum(modificationTypes), title: text, ...range, basis: text,
-  requiresProfessionalReview: z.boolean(), status: z.literal('illustrative'),
+  requiresProfessionalReview: z.boolean(), status: z.literal('illustrative').default('illustrative'),
 }).refine(ordered, 'Cost range must be ordered');
 export const costCatalogSchema = z.strictObject({
   updatedAt: z.iso.date(), currency: z.literal('USD'), status: z.literal('illustrative'),
