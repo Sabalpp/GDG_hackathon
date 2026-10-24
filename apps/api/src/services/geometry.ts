@@ -30,7 +30,7 @@ export function createGeometryClient<RequestSchema extends z.ZodType, ResponseSc
 
     let url: URL;
     try {
-      const base = new URL(options.baseUrl ?? process.env.GEOMETRY_BASE_URL ?? 'http://localhost:8000');
+      const base = new URL(options.baseUrl ?? process.env.GEOMETRY_BASE_URL ?? 'http://127.0.0.1:8000');
       if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) throw new Error();
       url = new URL(contract.path.replace(/^\//, ''), `${base.href.replace(/\/$/, '')}/`);
       if (url.origin !== base.origin) throw new Error();
@@ -50,6 +50,7 @@ export function createGeometryClient<RequestSchema extends z.ZodType, ResponseSc
       });
       if (!response.ok) {
         await response.body?.cancel();
+        if (response.status === 422) throw new GeometryError(422, 'INVALID_GEOMETRY_REQUEST', 'Geometry service rejected the layout or goals.');
         throw new GeometryError(502, 'GEOMETRY_UPSTREAM_ERROR', 'Geometry service could not complete validation.');
       }
       if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {

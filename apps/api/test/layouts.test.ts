@@ -16,7 +16,8 @@ const request = {
   goals: [{ id: 'goal', type: 'minimum-door-width', targetMm: 850, status: 'confirmed' }, { id: 'draft', type: 'minimum-path-width', status: 'draft' }],
 };
 const finding = { id: 'finding', goalId: 'goal', verdict: 'pass', measuredMm: 900, requiredMm: 850, affectedElementIds: ['door'], explanation: 'Measured clear width meets target.' };
-const response = { findings: [finding], summary: { total: 1, passed: 1, failed: 0, unknown: 0, status: 'pass' } };
+const integrity = { id: 'integrity:clear', goalId: 'layout-integrity', verdict: 'pass', affectedElementIds: [], explanation: 'No collisions.' };
+const response = { findings: [integrity, finding], summary: { passCount: 2, failCount: 0, unknownCount: 0, allPassed: true }, routes: [], limitations: ['Concept geometry only.'] };
 
 async function start(server: Server) {
   server.listen(0, '127.0.0.1');
@@ -58,11 +59,13 @@ test('public endpoint forwards canonical mm layout and only confirmed goals to c
 
 test('public endpoint preserves fail and unknown without reporting a pass', async () => {
   for (const verdict of ['fail', 'unknown']) {
-    const body = { findings: [{ ...finding, verdict, measuredMm: verdict === 'fail' ? 800 : undefined }], summary: {
-      total: 1, passed: 0, failed: verdict === 'fail' ? 1 : 0, unknown: verdict === 'unknown' ? 1 : 0, status: verdict,
-    } };
+    const body = { findings: [integrity, { ...finding, verdict, measuredMm: verdict === 'fail' ? 800 : undefined }], summary: {
+      passCount: 1, failCount: verdict === 'fail' ? 1 : 0, unknownCount: verdict === 'unknown' ? 1 : 0, allPassed: false,
+    }, routes: [], limitations: [] };
     await withServices(jsonHandler(body), async (url) => {
-      const result = await post(url);
+      const input = structuredClone(request);
+      if (verdict === 'fail') input.layout.doors[0]!.clearWidth = 800;
+      const result = await post(url, input);
       assert.equal(result.status, 200);
       assert.deepEqual(await result.json(), JSON.parse(JSON.stringify(body)));
     });
@@ -82,7 +85,7 @@ test('invalid dimensions, references, IDs, goals and unsafe extra fields never r
   change((b) => b.layout.doors[0].id = 'wall');
   change((b) => b.layout.walls[0].confidence = 2);
   change((b) => b.goals[0].fromRoomId = 'missing');
-  change((b) => delete b.goals[0].targetMm);
+  change((b) => b.goals[0].targetMm = -1);
   change((b) => b.goals[1].id = 'goal');
   change((b) => b.goals[0].status = 'draft');
   change((b) => b.goals[0] = { id: 'route', type: 'reachable-route', status: 'confirmed', fromRoomId: 'room' });
@@ -100,14 +103,14 @@ test('invalid dimensions, references, IDs, goals and unsafe extra fields never r
 test('malformed, incomplete, contradictory or unreferenced findings are rejected', async () => {
   const bodies = [
     {}, { ...response, summary: {} }, { ...response, findings: [] },
-    { ...response, findings: [{ ...finding, goalId: 'draft' }] },
-    { ...response, findings: [{ ...finding, affectedElementIds: ['missing'] }] },
-    { ...response, findings: [{ ...finding, measuredMm: 800 }] },
-    { ...response, findings: [{ ...finding, measuredMm: undefined }] },
-    { ...response, findings: [{ ...finding, requiredMm: 700 }] },
-    { ...response, findings: [{ ...finding, verdict: 'unknown' }] },
-    { ...response, findings: [finding, finding] },
-    { ...response, summary: { ...response.summary, passed: 2 } },
+    { ...response, findings: [integrity, { ...finding, goalId: 'draft' }] },
+    { ...response, findings: [integrity, { ...finding, affectedElementIds: ['missing'] }] },
+    { ...response, findings: [integrity, { ...finding, measuredMm: 800 }] },
+    { ...response, findings: [integrity, { ...finding, measuredMm: undefined }] },
+    { ...response, findings: [integrity, { ...finding, requiredMm: 700 }] },
+    { ...response, findings: [integrity, { ...finding, verdict: 'unknown' }] },
+    { ...response, findings: [integrity, finding, finding] },
+    { ...response, summary: { ...response.summary, passCount: 3 } },
   ];
   for (const body of bodies) await withServices(jsonHandler(body), async (url) => {
     const result = await post(url);
@@ -142,5 +145,49 @@ test('public endpoint rejects non-JSON bodies', async () => {
   await withServices(jsonHandler(response), async (url) => {
     const result = await fetch(`${url}/api/v1/layouts/validate`, { method: 'POST', body: 'text' });
     assert.equal(result.status, 415);
+  });
+});
+
+test('actual Python uncertainty extensions and point reachability are accepted', async () => {
+  const body = structuredClone(request) as any;
+  body.layout.doors[0].clearWidth = null;
+  delete body.goals[0].targetMm;
+  const resultBody = {
+    findings: [integrity, { ...finding, verdict: 'unknown', measuredMm: undefined, requiredMm: undefined }],
+    summary: { passCount: 1, failCount: 0, unknownCount: 1, allPassed: false }, routes: [], limitations: ['Unknown width.'],
+  };
+  await withServices(jsonHandler(resultBody), async (url) => {
+    const result = await post(url, body);
+    assert.equal(result.status, 200);
+    assert.equal((await result.json()).summary.allPassed, false);
+  });
+});
+
+test('actual Python route traces are preserved and inconsistent traces rejected', async () => {
+  const body = structuredClone(request) as any;
+  body.layout.rooms.push({ id: 'other', label: 'Other room', polygon: [{ x: 3000, y: 0 }, { x: 6000, y: 0 }, { x: 6000, y: 3000 }] });
+  body.goals = [{ id: 'route', type: 'minimum-path-width', status: 'confirmed', targetMm: 850, fromRoomId: 'room', toRoomId: 'other' }];
+  const resultBody = {
+    findings: [integrity, { ...finding, goalId: 'route', affectedElementIds: ['room', 'other'] }],
+    summary: response.summary,
+    routes: [{ goalId: 'route', fromRoomId: 'room', toRoomId: 'other', verdict: 'pass', requiredMm: 850, measuredMm: 900, points: [{ x: 100, y: 100 }, { x: 4000, y: 100 }] }],
+    limitations: ['Simplified geometry.'],
+  };
+  await withServices(jsonHandler(resultBody), async (url) => {
+    const result = await post(url, body);
+    assert.equal(result.status, 200);
+    assert.deepEqual(await result.json(), resultBody);
+  });
+  resultBody.routes[0]!.verdict = 'unknown';
+  await withServices(jsonHandler(resultBody), async (url) => {
+    assert.equal((await post(url, body)).status, 502);
+  });
+});
+
+test('upstream geometry schema rejection is 422 rather than an availability error', async () => {
+  await withServices((_req, res) => { res.writeHead(422); res.end('private details'); }, async (url) => {
+    const result = await post(url);
+    assert.equal(result.status, 422);
+    assert.equal((await result.json()).error.code, 'INVALID_GEOMETRY_REQUEST');
   });
 });

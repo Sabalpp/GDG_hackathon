@@ -1,86 +1,123 @@
-# Geometry validation
+# Express → actual Python geometry service
 
-`POST /api/v1/layouts/validate` accepts `{layout: Layout, goals: Goal[]}` in
-millimeters, x increasing right and y increasing down. Zod schemas and exported
-request/response types are in `src/schemas/layouts.ts`. Only confirmed goals are
-forwarded; at least one confirmed goal is required.
+Express `POST /api/v1/layouts/validate` calls Python's canonical endpoint with the
+same path. This was verified against `services/geometry/app/main.py` and
+`app/models.py`; `/validate` remains a Python alias, not the configured default.
 
-Server configuration (restart after changes):
+Server-only settings in `apps/api/.env` (also shown in `.env.example`):
 
 ```dotenv
-GEOMETRY_BASE_URL=http://localhost:8000
-GEOMETRY_VALIDATE_PATH=/validate
+GEOMETRY_BASE_URL=http://127.0.0.1:8000
+GEOMETRY_VALIDATE_PATH=/api/v1/layouts/validate
 ```
 
-The Python route is configurable and provisional until Person C confirms it.
-Python receives the same request wrapper, with draft goals filtered out.
+Both settings remain configurable. No AI key is needed for geometry. All units
+remain millimeters, x right and y down. Express filters drafts before forwarding
+and requires at least one confirmed goal. Python rejects drafts itself.
 
-## Provisional response contract for Person C
+## Actual contract
 
-Return HTTP 200, `Content-Type: application/json`, with canonical findings and
-this exact provisional summary shape:
+Request: `{layout, goals}`. Response:
 
 ```json
 {
   "findings": [{
-    "id": "finding-1", "goalId": "goal-1", "verdict": "pass",
-    "measuredMm": 900, "requiredMm": 850,
-    "affectedElementIds": ["door-1"],
-    "explanation": "Measured clear width meets the requested target."
+    "id": "goal-doors:door-bedroom", "goalId": "goal-doors", "verdict": "fail",
+    "measuredMm": 800, "requiredMm": 900,
+    "affectedElementIds": ["door-bedroom"],
+    "explanation": "Measured door clear width is below the project target."
   }],
-  "summary": {"total": 1, "passed": 1, "failed": 0, "unknown": 0, "status": "pass"}
+  "summary": {"passCount": 0, "failCount": 1, "unknownCount": 0, "allPassed": false},
+  "routes": [],
+  "limitations": ["Simplified concept geometry; not building-code compliance."]
 }
 ```
 
-Counts describe findings, not goals. Every confirmed goal requires at least one
-finding; missing or unsupported checks must explicitly return `unknown` rather
-than disappear. Finding IDs must be unique and goal/element references valid.
-Any fail makes summary status `fail`; otherwise any unknown makes it `unknown`.
-Only all-pass findings permit overall `pass`. Summary counts/status must agree
-with findings exactly. Extra response fields are rejected.
+This excerpt illustrates the shape. Real responses also include mandatory
+`layout-integrity` findings, which contribute to summary counts. Express allows
+that reserved synthetic goal ID only in responses; users cannot submit it.
+Every submitted confirmed goal and the integrity check must have a finding.
+Counts and allPassed must match the findings, and unknown never contributes to
+allPassed. Invalid goal/element references, duplicate findings, contradictory
+width verdicts, and inconsistent route traces are rejected.
 
-Width pass/fail findings require measuredMm and requiredMm; requiredMm must equal
-the confirmed target and the verdict must agree with measuredMm >= requiredMm.
-Unknown findings may omit measurements. Python remains responsible for computing
-geometry, routes, collisions, door placement, and polygon topology. Express
-checks response integrity; it does not independently verify Python computations
-or establish building-code compliance.
+Python additions now supported: missing/null door width and optional/null goal
+targets, paired optional room endpoints, inferred confidence requirements,
+editable/movable defaults, actual ID and collection bounds, routes and limitations.
+Missing width/target is not fabricated. Width check results may be unknown.
+Unscoped route goals follow Python's all-room anchor semantics. Reachable-route
+without target checks point connectivity only, not device clearance.
 
-## Remaining assumptions to confirm
+Python handles geometric input checks beyond the Zod boundary: simple polygons,
+room overlap, door centerlines, openings fitting walls, and overlapping openings.
+A Python HTTP 422 becomes a sanitized Express 422 INVALID_GEOMETRY_REQUEST rather
+than an availability error. No changes to Python are required for this adapter.
 
-- Confirmed width goals require targetMm. Confirmed reachable-route goals require
-  distinct existing fromRoomId and toRoomId. All supplied room references must
-  exist, even on drafts. Draft width targets may be omitted.
-- IDs are nonblank, at most 200 characters, and unique across layout elements.
-  Goal IDs are unique separately. Extra input fields are rejected.
-- Dimensions are positive finite numbers up to 10,000,000 mm. Coordinates may
-  be negative, with absolute value at most 10,000,000 mm. Confidence is in [0,1].
-  Measured distances may be zero.
-- Walls must have nonzero length; room polygons require three points and nonzero
-  signed area. Full geometric validity belongs to Python.
-- Arrays/strings are bounded in the schemas. Incoming bodies retain the existing
-  Express 32 KiB limit. These are backend safety limits, not design rules.
+## Run locally
 
-Person C must confirm the internal route, exact summary object, goal semantics,
-and limits above, then provide a reachable service implementing that contract.
-No Python code is needed to run the mock tests. Browser CORS is unnecessary for
-this server-to-server request.
-
-## Failure handling and testing
-
-The client defaults to a 10-second timeout covering headers and body, limits
-responses to 1 MiB, and rejects redirects. It does not retry or fabricate passing
-results. Errors use `{error:{code,message}}` with no findings: 400 invalid request,
-413 oversized body, 415 wrong content type, 503 invalid service configuration,
-502 connection/upstream/response errors, 504 timeout. Upstream debug messages are
-not exposed. Valid failed or unknown geometry checks return HTTP 200.
-
-From `apps/api`, run `npm test` and `npx tsc --noEmit`. Tests start mock Python
-HTTP servers, exercise the public Express route, and require no real Python
-service. To manually test against Person C's service, save a canonical request
-as `layout-request.json` and run:
+From the repository root, in one terminal (Python >=3.11):
 
 ```sh
-curl -i http://localhost:3001/api/v1/layouts/validate \
-  -H 'Content-Type: application/json' --data-binary @layout-request.json
+cd services/geometry
+python3.11 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
+
+In another terminal:
+
+```sh
+cd apps/api
+npm run dev
+```
+
+Set the two geometry values above in `.env` or the process environment first.
+Restart Express after changing environment values. If port 3001 is occupied by
+an existing dev server, use that server's watcher or stop it before starting a
+second one. Do not print environment files containing API keys.
+
+## Real verification and checks
+
+From `apps/api`, with both services running:
+
+```sh
+node scripts/smoke-geometry.mjs
+npm test
+npx tsc --noEmit
+```
+
+The real smoke script reads `data/sample-validation-request.json`, sends it
+through Express to Python, asserts door-bedroom fails at 800 vs 900 mm, then
+widens that door to 920 mm in memory and validates door goals only. It also checks
+a null-width door returns unknown. It does not alter shared sample data. The
+passing case establishes door clearance plus layout integrity, not route success
+or code compliance. EXPRESS_BASE_URL can select a different Express server.
+
+Manual baseline request from the repository root:
+
+```sh
+curl -i http://127.0.0.1:3001/api/v1/layouts/validate \
+  -H 'Content-Type: application/json' \
+  --data-binary @data/sample-validation-request.json
+```
+
+Python checks, from `services/geometry`:
+
+```sh
+.venv/bin/python -m pytest -q
+.venv/bin/ruff check app tests scripts
+.venv/bin/ruff format --check app tests scripts
+.venv/bin/python -m scripts.smoke
+```
+
+Express retains a 32 KiB incoming body limit, stricter than Python's 1 MiB.
+The client has a 10-second timeout covering headers/body, a 1 MiB response limit,
+and no automatic retries or redirects. Errors contain no passing result or raw
+upstream debug content. Statuses: 400 invalid Express request, 413 body limit,
+415 wrong media type, 422 Python input rejection, 503 invalid configuration,
+502 connection/upstream/malformed or inconsistent response, 504 timeout.
+
+Geometry passes are assertions from the Python engine; Express verifies contract
+integrity, not the engine's computations. Python limitations must remain visible
+to API consumers, especially square-footprint assumptions, unmodeled door swings,
+turning clearances, slopes, structure, and local building rules.

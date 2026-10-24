@@ -89,7 +89,7 @@ test('geometry client rejects non-success statuses, even with a passing body', a
       res.writeHead(status, { 'Content-Type': 'application/json' });
       res.end('{"verified":true}');
     }, async (baseUrl) => {
-      await assert.rejects(createGeometryClient(contract, { baseUrl })(payload), expectError('GEOMETRY_UPSTREAM_ERROR', 502));
+      await assert.rejects(createGeometryClient(contract, { baseUrl })(payload), expectError(status === 422 ? 'INVALID_GEOMETRY_REQUEST' : 'GEOMETRY_UPSTREAM_ERROR', status === 422 ? 422 : 502));
     });
   }
 });
