@@ -1,5 +1,5 @@
 import { createGeometryClient, GeometryError, type GeometryClientOptions } from './geometry.js';
-import { validateLayoutRequestSchema, validateLayoutResponseSchema, type ValidateLayoutRequest } from '../schemas/layouts.js';
+import { validateLayoutRequestSchema, validateLayoutResponseSchema, type ValidateLayoutRequest, type ValidateLayoutResponse } from '../schemas/layouts.js';
 
 export interface LayoutValidationOptions extends GeometryClientOptions { path?: string }
 
@@ -12,6 +12,11 @@ export async function validateLayout(input: ValidateLayoutRequest, options: Layo
   }
   const client = createGeometryClient({ path, request: validateLayoutRequestSchema, response: validateLayoutResponseSchema }, options);
   const result = await client(request);
+  return assertLayoutValidationResult(request, result);
+}
+
+// Shared integrity checks for validator responses and proposal before/after findings.
+export function assertLayoutValidationResult(request: ValidateLayoutRequest, result: ValidateLayoutResponse) {
   const invalid = () => { throw new GeometryError(502, 'INVALID_GEOMETRY_RESPONSE', 'Geometry service returned inconsistent or incomplete findings.'); };
   const goals = new Map(request.goals.map((goal) => [goal.id, goal]));
   const elements = new Set([...request.layout.walls, ...request.layout.doors, ...request.layout.objects, ...request.layout.rooms].map((item) => item.id));
