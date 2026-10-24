@@ -3,13 +3,16 @@ import helmet from 'helmet';
 import healthRouter from './routes/health.js';
 import { createRequirementsRouter } from './routes/requirements.js';
 import type { GenerateInterpretation } from './services/requirements.js';
+import { createLayoutsRouter } from './routes/layouts.js';
+import type { LayoutValidationOptions } from './services/layouts.js';
 
-export function createApp(generate?: GenerateInterpretation) {
+export function createApp(generate?: GenerateInterpretation, geometryOptions: LayoutValidationOptions = {}) {
   const app = express();
   app.use(helmet());
   app.use(express.json({ limit: '32kb', strict: false }));
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/requirements', createRequirementsRouter(generate));
+  app.use('/api/v1/layouts', createLayoutsRouter(geometryOptions));
   const handleError: ErrorRequestHandler = (error, _req, res, _next) => {
     const status = error?.type === 'entity.too.large' ? 413 : error?.type === 'entity.parse.failed' ? 400 : 500;
     res.status(status).json({ error: {
