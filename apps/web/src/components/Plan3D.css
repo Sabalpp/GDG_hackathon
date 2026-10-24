@@ -1,0 +1,81 @@
+.adapt-plan3d {
+  --studio-ink: #e9eee9;
+  --studio-muted: #aab8b2;
+  --studio-teal: #80d7b7;
+  color: var(--studio-ink);
+  background: #20292c;
+  border: 1px solid #39484a;
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 0;
+  box-shadow: 0 18px 44px rgb(22 36 34 / 16%);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.adapt-plan3d * { box-sizing: border-box; }
+.adapt-plan3d__header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.35rem 0.9rem; background: #263236; }
+.adapt-plan3d__eyebrow { display: block; color: var(--studio-teal); font-size: 0.64rem; font-weight: 750; letter-spacing: .18em; line-height: 1.4; text-transform: uppercase; }
+.adapt-plan3d h2 { margin: .12rem 0 0; color: #f4f3ed; font: 400 clamp(1.24rem, 2.3vw, 1.65rem)/1.18 Georgia, 'Times New Roman', serif; letter-spacing: -.025em; }
+.adapt-plan3d__unit { color: var(--studio-muted); font-size: .73rem; white-space: nowrap; }
+.adapt-plan3d__toolbar { display: flex; flex-wrap: wrap; gap: .38rem; align-items: center; padding: .6rem 1.2rem; border-top: 1px solid #3b4a4e; background: #263236; }
+.adapt-plan3d button { cursor: pointer; font: inherit; }
+.adapt-plan3d__toolbar button { border: 1px solid #536469; background: #303e41; color: #e8eeea; border-radius: 6px; padding: .49rem .7rem; font-size: .72rem; font-weight: 600; transition: background .16s, border-color .16s, transform .16s; }
+.adapt-plan3d__toolbar button:hover { background: #3b5252; border-color: #7ebda9; transform: translateY(-1px); }
+.adapt-plan3d__toolbar button.is-active { background: #215e52; color: #fff; border-color: #8bd5ba; }
+.adapt-plan3d__toolbar button:focus-visible, .adapt-plan3d__room-action button:focus-visible { outline: 3px solid #a6e4ca; outline-offset: 2px; }
+.adapt-plan3d__toolbar-divider { display: block; height: 1.35rem; border-left: 1px solid #526065; margin: 0 .14rem; }
+.adapt-plan3d__toolbar .adapt-plan3d__focus { color: #ade5cc; }
+.adapt-plan3d__viewport { position: relative; height: clamp(370px, 47vw, 690px); min-height: 370px; background: radial-gradient(ellipse at 52% 35%, #3b4c50, #20292c 75%); overflow: hidden; }
+.adapt-plan3d__viewport canvas { display: block; touch-action: none; }
+.adapt-plan3d__viewport-note { position: absolute; left: 18px; bottom: 14px; pointer-events: none; color: #d7e1dc; background: rgb(23 34 37 / 70%); border: 1px solid rgb(207 224 213 / 16%); border-radius: 4px; padding: .46rem .6rem; font-size: .57rem; font-weight: 700; letter-spacing: .13em; backdrop-filter: blur(6px); }
+.adapt-plan3d__viewport-note span { color: #84d1b5; padding: 0 .25rem; }
+.adapt-plan3d__room-label { display: grid; gap: 2px; text-align: center; min-width: 96px; color: #eff8ef; text-shadow: 0 2px 5px #172b28; padding: 5px 9px; background: rgb(31 49 47 / 76%); border: 1px solid rgb(219 236 222 / 37%); border-radius: 5px; box-shadow: 0 3px 12px rgb(14 28 26 / 22%); white-space: nowrap; transition: opacity .2s, background .2s; }
+.adapt-plan3d__room-label span { font: 600 11px/1.25 ui-sans-serif, system-ui, sans-serif; }
+.adapt-plan3d__room-label small { color: #a9d8c2; font: 700 9px/1.2 ui-sans-serif, system-ui, sans-serif; letter-spacing: .09em; text-transform: uppercase; }
+.adapt-plan3d__room-label.is-selected { border-color: #8ce5be; background: #27594c; }
+.adapt-plan3d__room-label.is-dimmed { opacity: .35; }
+.adapt-plan3d__finding-pin { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #f5f7eb; font: 800 13px/1 ui-sans-serif, system-ui, sans-serif; color: #122521; background: #59c7ab; box-shadow: 0 2px 9px rgb(0 0 0 / 35%); }
+.adapt-plan3d__finding-pin--fail { background: #e59076; }
+.adapt-plan3d__finding-pin--unknown { background: #d6bd8b; border-style: dashed; }
+.adapt-plan3d__finding-pin.is-selected { outline: 3px solid #fff; outline-offset: 2px; }
+.adapt-plan3d__inspector { display: flex; align-items: start; gap: 1.3rem; justify-content: space-between; min-height: 82px; padding: .9rem 1.3rem; background: #263236; border-top: 1px solid #3f5053; }
+.adapt-plan3d__inspector-main { display: grid; gap: 2px; }
+.adapt-plan3d__inspector-main strong { color: #f6f3e9; font: 400 1.14rem/1.28 Georgia, 'Times New Roman', serif; }
+.adapt-plan3d__inspector-main > span:last-child { color: var(--studio-muted); font-size: .72rem; }
+.adapt-plan3d__related-findings { list-style: none; padding: 0; margin: 0; max-width: 55%; display: grid; gap: 4px; color: #dce8de; font-size: .68rem; line-height: 1.4; }
+.adapt-plan3d__related-findings li { display: flex; gap: 8px; align-items: baseline; }
+.adapt-plan3d__status { color: #7ce0bd; font-weight: 750; text-transform: uppercase; font-size: .6rem; }
+.adapt-plan3d__status--fail { color: #f0a88e; }
+.adapt-plan3d__status--unknown { color: #e3ce9d; }
+.adapt-plan3d__room-list { display: flex; flex-wrap: wrap; gap: .55rem; padding: .8rem 1.3rem; border-top: 1px solid #3c4d4d; background: #263236; }
+.adapt-plan3d__room-action { display: flex; border: 1px solid #4c5d5e; border-radius: 5px; overflow: hidden; }
+.adapt-plan3d__room-action button { border: 0; color: #e3eae5; background: #314143; padding: .46rem .67rem; font-size: .69rem; font-weight: 650; }
+.adapt-plan3d__room-action button:first-child { display: grid; text-align: left; gap: 1px; }
+.adapt-plan3d__room-action button:first-child[aria-pressed='true'] { background: #306758; color: #fff; }
+.adapt-plan3d__room-action button:hover { background: #3f6058; }
+.adapt-plan3d__room-action button:last-child { border-left: 1px solid #526667; color: #9de0c2; }
+.adapt-plan3d__room-action small { color: #aabcb4; font-size: .58rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+.adapt-plan3d__caption { color: #b8c8c0; background: #20292c; border-top: 1px solid #39484a; margin: 0; padding: .85rem 1.3rem 1rem; font-size: .7rem; line-height: 1.5; }
+.adapt-plan3d__fallback { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; color: #d6e4dd; line-height: 1.55; }
+.adapt-plan3d__fallback strong { color: #f6f3ea; font: 400 1.4rem/1.2 Georgia, 'Times New Roman', serif; }
+.adapt-plan3d__fallback p { max-width: 31rem; font-size: .86rem; }
+/* The surrounding immersive workspace already provides heading, inspector, and room list. */
+.adapt-plan3d.immersive-workspace__renderer { position: relative; height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; }
+.adapt-plan3d.immersive-workspace__renderer .adapt-plan3d__header,
+.adapt-plan3d.immersive-workspace__renderer .adapt-plan3d__toolbar,
+.adapt-plan3d.immersive-workspace__renderer .adapt-plan3d__inspector,
+.adapt-plan3d.immersive-workspace__renderer .adapt-plan3d__room-list,
+.adapt-plan3d.immersive-workspace__renderer .adapt-plan3d__caption,
+.adapt-plan3d.immersive-workspace__renderer .adapt-plan3d__viewport-note { display: none; }
+.adapt-plan3d.immersive-workspace__renderer .adapt-plan3d__viewport { height: 100%; min-height: 0; }
+@media (max-width: 620px) {
+  .adapt-plan3d__header { align-items: start; padding: 1rem; }
+  .adapt-plan3d__unit { display: none; }
+  .adapt-plan3d__toolbar { padding: .6rem .75rem; }
+  .adapt-plan3d__viewport { height: 390px; min-height: 390px; }
+  .adapt-plan3d__viewport-note { font-size: .5rem; max-width: calc(100% - 24px); left: 12px; }
+  .adapt-plan3d__inspector { display: block; padding: .8rem 1rem; }
+  .adapt-plan3d__related-findings { max-width: none; margin-top: .5rem; }
+  .adapt-plan3d__room-list { padding: .75rem 1rem; }
+  .adapt-plan3d__caption { padding: .8rem 1rem; }
+}
+@media print { .adapt-plan3d { display: none; } }
