@@ -9,9 +9,13 @@ export type WorkspaceRendererProps = {
   layout: Layout
   className?: string
   onUnavailable?: () => void
+  findings?: ConstraintFinding[]
+  selectedFindingId?: string
+  selectedRoomId?: string
   cameraPreset?: CameraPreset
   cameraRequestId?: number
   exploded?: boolean
+  onExplodedChange?: (exploded: boolean) => void
   focusedRoomId?: string
   selectedElementId?: string
   onSelectElement?: (id: string) => void
@@ -27,12 +31,12 @@ export type RendererCapabilities = {
 
 export type ImmersiveWorkspaceProps = {
   layout?: Layout
-  originalLayout?: Layout
   proposal?: Proposal
   findings?: ConstraintFinding[]
   view: '2d' | '3d'
   showAfter: boolean
   selectedElementId?: string
+  selectedFindingId?: string
   onViewChange: (view: '2d' | '3d') => void
   onShowAfterChange: (showAfter: boolean) => void
   onSelectElement: (id?: string) => void
@@ -76,7 +80,7 @@ function statusLabel(verdict: ConstraintFinding['verdict']) {
   return verdict === 'pass' ? 'Passed in this model' : verdict === 'fail' ? 'Needs attention' : 'Unknown / not measured'
 }
 
-export function ImmersiveWorkspace({ layout, originalLayout, proposal, findings, view, showAfter, selectedElementId, onViewChange, onShowAfterChange, onSelectElement, render2D, renderer: Renderer, rendererCapabilities = {}, loading = false }: ImmersiveWorkspaceProps) {
+export function ImmersiveWorkspace({ layout, proposal, findings, view, showAfter, selectedElementId, selectedFindingId, onViewChange, onShowAfterChange, onSelectElement, render2D, renderer: Renderer, rendererCapabilities = {}, loading = false }: ImmersiveWorkspaceProps) {
   const [expanded, setExpanded] = useState(false)
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('overview')
@@ -149,7 +153,7 @@ export function ImmersiveWorkspace({ layout, originalLayout, proposal, findings,
         {layout ? <>
           <div className="immersive-workspace__view immersive-workspace__view--2d" hidden={view !== '2d'}>{render2D}</div>
           <div className="immersive-workspace__view immersive-workspace__view--3d" hidden={view !== '3d'}>
-            <Renderer layout={layout} className="immersive-workspace__renderer" onUnavailable={() => setThreeUnavailable(true)} cameraPreset={cameraPreset} cameraRequestId={cameraRequestId} exploded={exploded} focusedRoomId={focusedRoomId} selectedElementId={selectedElementId} onSelectElement={onSelectElement} onSelectRoom={chooseRoom} />
+            <Renderer layout={layout} className="immersive-workspace__renderer" onUnavailable={() => setThreeUnavailable(true)} findings={findings} selectedFindingId={selectedFindingId} selectedRoomId={selectedRoomId} cameraPreset={cameraPreset} cameraRequestId={cameraRequestId} exploded={exploded} onExplodedChange={setExploded} focusedRoomId={focusedRoomId} selectedElementId={selectedElementId} onSelectElement={onSelectElement} onSelectRoom={chooseRoom} />
           </div>
         </> : <div className="immersive-workspace__empty" role="status">{loading ? 'Loading the calibrated apartment…' : 'The sample layout is unavailable.'}</div>}
         {transitioning && <div className="immersive-workspace__transition" aria-hidden="true" />}
