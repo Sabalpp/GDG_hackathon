@@ -47,7 +47,7 @@ def apply_modification(layout: Layout, modification: Modification) -> Layout:
     data = layout.model_dump(mode="json")
     if modification.type == "move-furniture":
         obj = next((obj for obj in layout.objects if obj.id == modification.targetElementId), None)
-        if obj is None or obj.kind != "furniture" or not obj.movable or obj.source == "ai-inferred":
+        if obj is None or obj.kind != "furniture" or not obj.movable or obj.source in {"ai-inferred", "image-inferred"}:
             raise ModificationError("Only verified, explicitly movable furniture may be moved")
         if set(modification.params) != {"x", "y"}:
             raise ModificationError(
@@ -128,7 +128,7 @@ def _candidates(layout: Layout, goals: list[Goal], changed_ids: set[str]):
             obj.id in changed_ids
             or obj.kind != "furniture"
             or not obj.movable
-            or obj.source == "ai-inferred"
+            or obj.source in {"ai-inferred", "image-inferred"}
         ):
             continue
         positions = set()

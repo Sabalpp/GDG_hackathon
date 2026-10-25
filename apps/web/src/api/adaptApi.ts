@@ -1,5 +1,6 @@
 import type { ConstraintFinding, Goal, Layout, Proposal } from '../contracts'
 import { sampleLayout } from '../data/sampleLayout'
+import { analyzeFloorPlanFile } from '../analysis/localFloorPlan'
 
 export type InterpretationSuggestion = {
   category: string
@@ -13,6 +14,12 @@ export type InterpretationResponse = {
   goals: InterpretationSuggestion[]
   questions: string[]
   warnings: string[]
+}
+
+export type FloorPlanAnalysisResponse = {
+  layout: Layout
+  notes: string[]
+  source: 'image-inferred'
 }
 
 const configuredUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim().replace(/\/$/, '')
@@ -42,13 +49,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+export async function analyzeFloorPlan(file: File, widthMm: number, heightMm: number): Promise<FloorPlanAnalysisResponse> {
+  const started = performance.now()
+  try { return await analyzeFloorPlanFile(file, widthMm, heightMm) }
+  finally {
+    const remaining = 450 - (performance.now() - started)
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining))
+  }
+}
+
 export async function loadSample(): Promise<Layout> {
   // The calibrated fixture is bundled with the frontend; the API has no sample route.
   return structuredClone(sampleLayout)
 }
 
 export async function interpretRequest(description: string): Promise<InterpretationResponse> {
-  if (!baseUrl) throw new Error('AI interpretation is unavailable in the local demo. Add goals manually below.')
+  if (!baseUrl) throw new Error('AI interpretation is unavailable. Add goals manually below.')
   const response = await request<unknown>('/requirements/interpret', {
     method: 'POST', body: JSON.stringify({ text: description }),
   })
@@ -70,7 +86,7 @@ function localFindings(_layout: Layout, goals: Goal[]): ConstraintFinding[] {
       verdict: 'unknown',
       affectedElementIds: [],
       requiredMm: goal.targetMm,
-      explanation: 'Geometry service is unavailable in local sample mode. This goal has not been measured.',
+      explanation: 'Geometry service is unavailable. This goal has not been measured.',
     }
   })
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { adapterMode, generateProposal, interpretRequest, loadSample, validateLayout, type InterpretationResponse } from './api/adaptApi'
+import { adapterMode, analyzeFloorPlan, generateProposal, interpretRequest, loadSample, validateLayout, type FloorPlanAnalysisResponse, type InterpretationResponse } from './api/adaptApi'
 import type { Goal } from './contracts'
 import { Plan2D } from './components/Plan2D'
 import { Plan3D } from './components/Plan3D'
@@ -39,7 +39,7 @@ function GoalEditor({ goal }: { goal: Goal }) {
 function Experience() {
   const state = useAppState()
   const dispatch = useAppDispatch()
-  const [busy, setBusy] = useState<'sample' | 'interpret' | 'validate' | 'generate' | null>(null)
+  const [busy, setBusy] = useState<'sample' | 'interpret' | 'validate' | 'generate' | 'analyze' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [interpretation, setInterpretation] = useState<InterpretationResponse | null>(null)
@@ -47,7 +47,16 @@ function Experience() {
   const [cameraRequestId, setCameraRequestId] = useState(0)
   const [zoomRequest, setZoomRequest] = useState<{ direction: 'in' | 'out'; version: number }>()
   const [fullScreen, setFullScreen] = useState(false)
+  const [planFile, setPlanFile] = useState<File | null>(null)
+  const [planPreviewUrl, setPlanPreviewUrl] = useState<string>()
+  const [planWidthMm, setPlanWidthMm] = useState('')
+  const [planHeightMm, setPlanHeightMm] = useState('')
+  const [planAnalysis, setPlanAnalysis] = useState<FloorPlanAnalysisResponse | null>(null)
+  const [reviewAcknowledged, setReviewAcknowledged] = useState(false)
   const activeLayout = selectActiveLayout(state)
+  const workspaceTitle = state.layoutVerification !== 'sample' && planFile
+    ? planFile.name.replace(/\.[^.]+$/, '')
+    : 'Sample apartment'
   const activeFindings = selectActiveFindings(state)
   const confirmed = selectAllGoalsConfirmed(state)
   const validGoals = state.goals.length > 0 && state.goals.every((goal) => goal.type === 'reachable-route'
@@ -62,6 +71,12 @@ function Experience() {
       .finally(() => { if (!cancelled) setBusy(null) })
     return () => { cancelled = true }
   }, [dispatch])
+  useEffect(() => {
+    if (!planFile) { setPlanPreviewUrl(undefined); return }
+    const url = URL.createObjectURL(planFile)
+    setPlanPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [planFile])
   useEffect(() => {
     if (!fullScreen) return
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setFullScreen(false) }
@@ -87,8 +102,57 @@ function Experience() {
       dispatch({ type: 'stage', value: 'goals' })
     } finally { setBusy(null) }
   }
+  function selectPlan(file: File | null) {
+    setPlanFile(file)
+    setPlanAnalysis(null)
+    setReviewAcknowledged(false)
+  }
+  async function loadPlanSample(fileName: string, width: number, height: number) {
+    setError(null)
+    try {
+      const response = await fetch(`/sample-floor-plans/${fileName}`)
+      if (!response.ok) throw new Error('The sample floor plan could not be loaded.')
+      const file = new File([await response.blob()], fileName, { type: 'image/svg+xml' })
+      selectPlan(file)
+      setPlanWidthMm(String(width))
+      setPlanHeightMm(String(height))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The sample floor plan could not be loaded.')
+    }
+  }
+  async function analyzePlan() {
+    if (!planFile) { setError('Choose a floor-plan image or load one of the provided samples.'); return }
+    const width = Number(planWidthMm)
+    const height = Number(planHeightMm)
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 500 || height < 500) {
+      setError('Enter the overall width and height printed on the floor plan, in millimeters.')
+      return
+    }
+    setBusy('analyze'); setError(null); setNotice(null)
+    try {
+      const result = await analyzeFloorPlan(planFile, width, height)
+      setPlanAnalysis(result)
+      setReviewAcknowledged(false)
+      dispatch({ type: 'layout', value: result.layout, verification: 'review-required' })
+      dispatch({ type: 'view', value: '2d' })
+      dispatch({ type: 'stage', value: 'plan' })
+      setNotice('The detected layout is shown in the plan view. Review its geometry before confirming the drawing measurements.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The floor plan could not be analyzed.')
+    } finally { setBusy(null) }
+  }
+  function confirmAnalyzedPlan() {
+    dispatch({ type: 'confirm-layout' })
+    setReviewAcknowledged(false)
+    setNotice('Plan geometry confirmed. Any measurements describe the supplied drawing, not verified conditions in the home.')
+  }
   async function generate() {
     if (!state.layout) { setError('The sample layout is not available.'); return }
+    if (state.layoutVerification === 'review-required') {
+      setError('Review the extracted room outlines, walls, door locations, and overall dimensions before checking this plan.')
+      dispatch({ type: 'stage', value: 'plan' })
+      return
+    }
     if (!confirmed) {
       if (adapterMode === 'api' && state.description.trim() && !interpretation && state.goals.length === 0) { await interpret(); return }
       dispatch({ type: 'stage', value: 'goals' })
@@ -110,6 +174,11 @@ function Experience() {
   }
   async function checkGoals() {
     if (!state.layout) return
+    if (state.layoutVerification === 'review-required') {
+      setError('Review and confirm the extracted plan geometry before checking it.')
+      dispatch({ type: 'stage', value: 'plan' })
+      return
+    }
     setBusy('validate'); setError(null)
     try { dispatch({ type: 'findings', value: await validateLayout(state.layout, state.goals) }) }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'The model check failed.') }
@@ -121,7 +190,7 @@ function Experience() {
     <header className="adapt-header"><div className="adapt-header__inner"><div className="adapt-brand"><strong>ADAPT</strong><i aria-hidden="true" /><span>ACCESSIBLE SPACES</span></div><span className="adapt-level">Level 01</span></div></header>
     <main className="adapt-main"><div className="adapt-grid">
       <section className="adapt-workspace" aria-label="Apartment workspace">
-        <div className="adapt-title-row"><div><h1>Sample apartment</h1><p>{state.showAfter && state.proposal ? 'Adapted concept proposal' : 'Standard floor plan'} <span>· Calibrated sample in mm</span></p></div>
+        <div className="adapt-title-row"><div><h1>{workspaceTitle}</h1><p>{state.showAfter && state.proposal ? 'Adapted concept proposal' : 'Standard floor plan'} <span>· {state.layoutVerification === 'sample' ? 'Calibrated sample in mm' : 'Plan-derived geometry in mm'}</span></p></div>
           <div className="adapt-segment" role="group" aria-label="Floor plan mode"><button type="button" aria-pressed={!state.showAfter} onClick={() => dispatch({ type: 'show-after', value: false })}>Standard</button><button type="button" aria-pressed={state.showAfter && !!state.proposal} disabled={!state.proposal} onClick={() => dispatch({ type: 'show-after', value: true })} title={!state.proposal ? 'Generate a concept first' : undefined}>Adapted</button></div></div>
         <div className={`adapt-model-card${fullScreen ? ' adapt-model-card--fullscreen' : ''}`}>
           <div className="adapt-model-card__view">{activeLayout ? state.view === '3d' ? <Plan3D layout={activeLayout} findings={activeFindings} selectedRoomId={selectedRoomId} selectedElementId={state.selectedElementId} selectedFindingId={state.selectedFindingId} onSelectRoom={setSelectedRoomId} onSelectElement={(id) => dispatch({ type: 'selected-element', id })} cameraPreset="overview" cameraRequestId={cameraRequestId} focusedRoomId={selectedRoomId} zoomRequest={zoomRequest} onUnavailable={() => dispatch({ type: 'view', value: '2d' })} className="adapt-reference-viewer" /> : <Plan2D layout={activeLayout} findings={activeFindings} selectedElementId={state.selectedElementId} onSelectElement={(id) => dispatch({ type: 'selected-element', id })} mode={state.proposal && state.showAfter ? 'before-after' : 'single'} beforeLayout={state.proposal && state.showAfter ? state.layout : undefined} beforeFindings={state.proposal && state.showAfter ? state.proposal.findingsBefore : undefined} className="adapt-reference-plan2d" /> : <div className="adapt-model-empty" role="status">{busy === 'sample' ? 'Loading sample apartment…' : 'Sample geometry is unavailable.'}</div>}</div>
@@ -135,7 +204,24 @@ function Experience() {
       </section>
       <aside className="adapt-sidebar" aria-label="Planning controls">
         <div className="adapt-sidebar__top"><span className="adapt-sidebar__eyebrow">YOUR PLANNING STUDIO</span><h2>{currentStage === 'plan' ? 'A space that fits your life.' : currentStage === 'goals' ? 'Shape your goals.' : 'Review the concept.'}</h2><p>{currentStage === 'plan' ? 'Choose an idea or describe what you need. The calibrated sample is ready to explore.' : currentStage === 'goals' ? 'Set measurable targets and confirm them before the model checks the layout.' : 'See measured outcomes and what remains unknown.'}</p></div>
-        {adapterMode === 'local-demo' && <div className="adapt-local-banner" role="note"><strong>Local sample mode</strong><span>AI interpretation and geometry checks need the API services. Enter goals manually; findings remain unknown until geometry is connected.</span></div>}
+        <section className="adapt-floorplan-upload" aria-labelledby="adapt-upload-heading">
+          <div className="adapt-floorplan-upload__heading"><div><span className="adapt-sidebar__eyebrow">START WITH A DRAWING</span><h3 id="adapt-upload-heading">Analyze a floor plan</h3></div><Symbol name="upload_file" /></div>
+          <p className="adapt-floorplan-upload__intro">Upload a clear, straight-on PNG, JPEG, or SVG with dark wall lines. Enter its printed outside dimensions to scale the detected layout. Room names and furniture are not read.</p>
+          <label className="adapt-floorplan-upload__file">Choose floor-plan image<input type="file" accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg" onChange={(event) => selectPlan(event.target.files?.[0] ?? null)} /></label>
+          {planFile && <div className="adapt-floorplan-upload__selected"><span>{planFile.name}</span>{planPreviewUrl && <img src={planPreviewUrl} alt="Preview of selected floor plan" />}</div>}
+          <div className="adapt-floorplan-upload__dimensions"><label>Overall width (mm)<input type="number" min="500" max="100000" step="100" value={planWidthMm} onChange={(event) => setPlanWidthMm(event.target.value)} placeholder="e.g. 12000" /></label><label>Overall height (mm)<input type="number" min="500" max="100000" step="100" value={planHeightMm} onChange={(event) => setPlanHeightMm(event.target.value)} placeholder="e.g. 8000" /></label></div>
+          <button type="button" className="adapt-floorplan-upload__analyze" disabled={busy !== null} onClick={() => void analyzePlan()}>{busy === 'analyze' ? 'Analyzing drawing…' : 'Analyze floor plan'}<Symbol name="auto_awesome" /></button>
+          <div className="adapt-floorplan-upload__samples" aria-label="Sample floor plans"><span>Try a sample:</span><button type="button" disabled={busy !== null} onClick={() => void loadPlanSample('two-bedroom-apartment.svg', 12000, 8000)}>Two-bedroom apartment</button><button type="button" disabled={busy !== null} onClick={() => void loadPlanSample('compact-one-bedroom.svg', 9000, 6000)}>Compact one-bedroom</button></div>
+          {planAnalysis && <div className="adapt-floorplan-upload__review" role="status">
+            <strong>{state.layoutVerification === 'confirmed' ? 'Plan geometry confirmed' : 'Image analysis draft · review required'}</strong>
+            <span>{planAnalysis.layout.rooms.length} rooms · {planAnalysis.layout.walls.length} walls · {planAnalysis.layout.doors.length} doors · {planAnalysis.layout.objects.length} objects</span>
+            {planAnalysis.notes.map((note, index) => <small key={index}>{note}</small>)}
+            {state.layoutVerification === 'review-required' && <><label className="adapt-floorplan-upload__confirm"><input type="checkbox" checked={reviewAcknowledged} onChange={(event) => setReviewAcknowledged(event.target.checked)} /><span>I reviewed the 2D plan and checked its room outlines, door locations, and overall dimensions against the drawing.</span></label><button type="button" disabled={!reviewAcknowledged} onClick={confirmAnalyzedPlan}>Confirm reviewed drawing</button></>}
+            {state.layoutVerification === 'confirmed' && <small>Checks describe measurements from this drawing; they do not verify the physical home.</small>}
+          </div>}
+          <small className="adapt-floorplan-upload__privacy">Detected geometry is an estimate until you review it against the original drawing.</small>
+        </section>
+        {adapterMode === 'local-demo' && <div className="adapt-local-banner" role="note"><strong>Sample mode</strong><span>AI interpretation and geometry checks need the API services. Enter goals manually; findings remain unknown until geometry is connected.</span></div>}
         {error && <div className="adapt-message adapt-message--error" role="alert">{error}<button type="button" onClick={() => setError(null)} aria-label="Dismiss error">×</button></div>}
         {notice && <div className="adapt-message" role="status">{notice}</div>}
         {currentStage === 'plan' && <div className="adapt-panel-section"><div className="adapt-section-heading"><strong>Key Adaptations</strong><span>Ideas to explore</span></div><div className="adapt-idea-list">{ideas.map((idea) => <button key={idea.title} type="button" className="adapt-idea" onClick={() => addIdea(idea.type, idea.targetMm)}><span className="adapt-idea__icon"><Symbol name={idea.icon} /></span><span className="adapt-idea__copy"><strong>{idea.title}</strong><small>{idea.description}</small></span><span className="adapt-idea__add" aria-hidden="true">+</span></button>)}</div></div>}

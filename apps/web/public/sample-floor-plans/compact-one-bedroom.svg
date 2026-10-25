@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="720" viewBox="0 0 1000 720" role="img" aria-labelledby="title desc">
+  <title id="title">Compact one-bedroom sample floor plan</title>
+  <desc id="desc">Dimensioned concept plan, 9,000 millimeters by 6,000 millimeters. Rooms and openings are illustrative.</desc>
+  <rect width="1000" height="720" fill="#fff"/>
+  <g fill="none" stroke="#15251d" stroke-width="12" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M150 140H825V590H150Z"/>
+    <path d="M425 140V270 M425 330V590"/>
+    <path d="M625 140V220 M625 280V350 M625 410V590"/>
+    <path d="M150 365H230 M290 365H425"/>
+    <path d="M625 365H710 M770 365H825"/>
+  </g>
+  <g fill="none" stroke="#597064" stroke-width="3">
+    <path d="M425 270a60 60 0 0 1 60 60 M625 220a60 60 0 0 1 60 60 M230 365a60 60 0 0 1 60 60 M710 365a60 60 0 0 1 60 60"/>
+    <path d="M150 92H825 M150 82V102 M825 82V102 M880 140V590 M870 140H890 M870 590H890"/>
+  </g>
+  <g fill="#233a2d" font-family="Georgia,serif" text-anchor="middle">
+    <text x="286" y="275" font-size="25">Bedroom</text><text x="525" y="320" font-size="21">Hall</text>
+    <text x="725" y="260" font-size="22">Bathroom</text><text x="725" y="510" font-size="23">Living / kitchen</text>
+    <text x="488" y="72" font-size="18">9,000 mm overall</text>
+    <text x="918" y="365" font-size="18" transform="rotate(90 918 365)">6,000 mm overall</text>
+  </g>
+  <text x="150" y="660" fill="#597064" font-family="Arial,sans-serif" font-size="15">SAMPLE PLAN B · Measurements are illustrative; use the printed overall dimensions to calibrate.</text>
+</svg>

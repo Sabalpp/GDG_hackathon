@@ -33,7 +33,7 @@ LIMITATIONS = [
     "Concept geometry only; results are not accessibility compliance or construction approval.",
     "Routes use fixed room representative points and an axis-aligned square footprint in 2D.",
     "Door swings, turning circles, thresholds, slopes and vertical clearances are not modeled.",
-    "AI-inferred geometry and missing door widths remain unverified; unknown is not pass.",
+    "Inferred geometry and missing door widths remain unverified; unknown is not pass.",
     "Clearance is a conservative lower bound, rounded down to whole millimeters.",
 ]
 
@@ -89,7 +89,7 @@ def collision_findings(layout: Layout) -> list[ConstraintFinding]:
     by_id = {element.id: element for element in [*layout.walls, *layout.objects]}
 
     def add(ids: list[str], message: str) -> None:
-        uncertain = any(by_id[item].source == "ai-inferred" for item in ids)
+        uncertain = any(by_id[item].source in {"ai-inferred", "image-inferred"} for item in ids)
         findings.append(
             ConstraintFinding(
                 id=derived_id("integrity", *ids),
@@ -112,7 +112,7 @@ def collision_findings(layout: Layout) -> list[ConstraintFinding]:
                 add([obj.id, wall_id], "Object footprint overlaps a solid wall segment.")
     if not findings:
         uncertain = any(
-            item.source == "ai-inferred" for item in [*layout.walls, *layout.doors, *layout.objects]
+            item.source in {"ai-inferred", "image-inferred"} for item in [*layout.walls, *layout.doors, *layout.objects]
         )
         findings.append(
             ConstraintFinding(
@@ -156,10 +156,10 @@ class GeometryContext:
         self.free = self.domain.difference(unary_union(obstacles))
         self.uncertainties = []
         if any(
-            item.source == "ai-inferred"
+            item.source in {"ai-inferred", "image-inferred"}
             for item in [*self.layout.walls, *self.layout.doors, *self.layout.objects]
         ):
-            self.uncertainties.append("AI-inferred geometry must be measured and confirmed")
+            self.uncertainties.append("Inferred geometry must be measured and confirmed")
         if any(door.clearWidth is None for door in self.layout.doors):
             self.uncertainties.append("one or more door clear widths are missing")
         if any(not _is_orthogonal([wall.start.xy(), wall.end.xy()]) for wall in self.layout.walls):
@@ -267,8 +267,8 @@ def _door_findings(layout: Layout, goal: Goal) -> list[ConstraintFinding]:
     for door in layout.doors:
         uncertain = (
             door.clearWidth is None
-            or door.source == "ai-inferred"
-            or walls[door.wallId].source == "ai-inferred"
+            or door.source in {"ai-inferred", "image-inferred"}
+            or walls[door.wallId].source in {"ai-inferred", "image-inferred"}
         )
         verdict = "unknown" if uncertain else "pass" if door.clearWidth >= goal.targetMm else "fail"
         findings.append(

@@ -46,14 +46,14 @@ class Rect2D(Point2D):
 
 
 class ConfidenceRecord(Model):
-    source: Literal["sample", "user", "ai-inferred"]
+    source: Literal["sample", "user", "ai-inferred", "image-inferred"]
     confidence: Annotated[float, Field(ge=0, le=1)] | None = None
 
     @model_validator(mode="after")
     def inference_has_confidence(self) -> Self:
-        if self.source == "ai-inferred" and self.confidence is None:
+        if self.source in {"ai-inferred", "image-inferred"} and self.confidence is None:
             raise ValueError(
-                "ai-inferred elements require confidence; measurements remain unverified"
+                "inferred elements require confidence; measurements remain unverified"
             )
         return self
 

@@ -3,11 +3,13 @@ import type { ConstraintFinding, Goal, Layout, Proposal } from '../contracts'
 
 export type Stage = 'plan' | 'goals' | 'review'
 export type PlanView = '2d' | '3d'
+export type LayoutVerification = 'sample' | 'review-required' | 'confirmed'
 
 export type AppState = {
   stage: Stage
   view: PlanView
   layout?: Layout
+  layoutVerification: LayoutVerification
   goals: Goal[]
   description: string
   budgetUsd: string
@@ -21,7 +23,8 @@ export type AppState = {
 type Action =
   | { type: 'stage'; value: Stage }
   | { type: 'view'; value: PlanView }
-  | { type: 'layout'; value: Layout }
+  | { type: 'layout'; value: Layout; verification?: LayoutVerification }
+  | { type: 'confirm-layout' }
   | { type: 'description'; value: string }
   | { type: 'budget'; value: string }
   | { type: 'add-goal'; value: Goal }
@@ -36,7 +39,7 @@ type Action =
   | { type: 'show-after'; value: boolean }
 
 const initialState: AppState = {
-  stage: 'plan', view: '2d', goals: [], description: '', budgetUsd: '', showAfter: false,
+  stage: 'plan', view: '2d', goals: [], description: '', budgetUsd: '', showAfter: false, layoutVerification: 'sample',
 }
 
 function invalidate(state: AppState): AppState {
@@ -47,7 +50,20 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'stage': return { ...state, stage: action.value }
     case 'view': return { ...state, view: action.value }
-    case 'layout': return { ...state, layout: action.value, findingsBefore: undefined, proposal: undefined }
+    case 'layout': return { ...state, layout: action.value, layoutVerification: action.verification ?? 'sample', findingsBefore: undefined, proposal: undefined }
+    case 'confirm-layout': {
+      if (!state.layout) return state
+      const confirm = <T extends { source?: string; confidence?: number }>(element: T): T => element.source === 'ai-inferred' || element.source === 'image-inferred'
+        ? { ...element, source: 'user', confidence: undefined }
+        : element
+      const layout = {
+        ...state.layout,
+        walls: state.layout.walls.map(confirm),
+        doors: state.layout.doors.map(confirm),
+        objects: state.layout.objects.map(confirm),
+      }
+      return { ...invalidate(state), layout, layoutVerification: 'confirmed' }
+    }
     case 'description': return { ...state, description: action.value }
     case 'budget': return { ...state, budgetUsd: action.value }
     case 'add-goal': return invalidate({ ...state, goals: [...state.goals, action.value] })

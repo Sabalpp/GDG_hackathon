@@ -60,6 +60,11 @@ Requests without a browser `Origin` header continue to work for server clients.
 
 ## Measured layout checks and concept proposals
 
+The frontend can read simple high-contrast, orthogonal plan images in the
+browser. That image extraction does not call Express or send the file to a
+model. The user supplies the drawing's overall dimensions, reviews the draft
+geometry, and confirms it before submitting layout goals to these endpoints.
+
 The calibrated sample is bundled with the frontend. The API accepts that same
 canonical `Layout` JSON (millimeters, x right, y down); it does not maintain a
 second sample layout. These endpoints are deterministic and require confirmed
