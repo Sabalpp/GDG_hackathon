@@ -52,3 +52,35 @@ User text is sent to Google for interpretation; it is not logged by this backend
 Run `npm test` for HTTP integration tests with an injected model boundary (no
 credentials or paid requests), and `npx tsc --noEmit` for type checking.
 A live successful generation requires a configured API key and model access.
+
+The API allows browser requests from local Vite origins (`localhost` or
+`127.0.0.1`) and exact origins listed in `FRONTEND_ORIGIN` (comma-separated).
+Set that variable to the deployed frontend origin when hosting separately.
+Requests without a browser `Origin` header continue to work for server clients.
+
+## Measured layout checks and concept proposals
+
+The calibrated sample is bundled with the frontend. The API accepts that same
+canonical `Layout` JSON (millimeters, x right, y down); it does not maintain a
+second sample layout. These endpoints are deterministic and require confirmed
+structured goals. They do not call the language model:
+
+- `POST /api/v1/layouts/validate` with `{ "layout": Layout, "goals": Goal[] }`
+  returns `ConstraintFinding[]`.
+- `POST /api/v1/proposals/generate` with
+  `{ "layout": Layout, "goals": Goal[], "budgetUsd"?: number }` returns a
+  `Proposal` with a `resultLayout`, before/after findings, modifications,
+  unresolved questions, and an empty cost list until a cost catalog exists.
+
+Currently, measured doorway widths are compared with user-entered doorway
+targets. Path width and reachable-route goals return `unknown` because the
+layout does not contain the measured route geometry needed to check them.
+Proposals may conceptually widen explicitly editable doors up to 900 mm when
+the opening fits the modeled wall segment. This is an illustrative model edit;
+wall structure, services, permissions, and construction feasibility remain
+unverified. Budget is accepted but no quote or cost estimate is inferred.
+
+Both endpoints reject malformed geometry, missing wall references, nonfinite or
+nonpositive dimensions, duplicate element IDs, and draft goals with HTTP 400.
+Requests must use JSON. They use the same JSON error envelope as the
+interpretation endpoint.
