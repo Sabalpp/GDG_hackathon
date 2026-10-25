@@ -19,6 +19,7 @@ export type Plan3DProps = {
   onExplodedChange?: (exploded: boolean) => void;
   onUnavailable?: () => void;
   className?: string;
+  zoomRequest?: { direction: 'in' | 'out'; version: number };
 };
 
 function hasWebGL(): boolean {
@@ -39,7 +40,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode; onError: () =>
 
 export function Plan3D({ layout, findings = [], selectedFindingId, selectedRoomId, onSelectRoom,
   selectedElementId, onSelectElement, cameraPreset, cameraRequestId, focusedRoomId,
-  exploded, onExplodedChange, onUnavailable, className = '' }: Plan3DProps) {
+  exploded, onExplodedChange, onUnavailable, className = '', zoomRequest }: Plan3DProps) {
   const [availability, setAvailability] = useState<'checking' | 'ready' | 'unavailable'>('checking');
   const [localRoomId, setLocalRoomId] = useState<string>();
   const [localElementId, setLocalElementId] = useState<string>();
@@ -114,6 +115,7 @@ export function Plan3D({ layout, findings = [], selectedFindingId, selectedRoomI
             <Plan3DCanvas layout={layout} bounds={bounds} exploded={isExploded} selectedRoomId={roomId}
               selectedElementId={elementId} selectedFindingId={selectedFindingId} findings={findings}
               onSelectRoom={selectRoom} onSelectElement={selectElement} cameraCommand={cameraCommand}
+              zoomRequest={zoomRequest}
               onContextLost={() => setAvailability('unavailable')} />
           </SceneErrorBoundary>}
       <div className="adapt-plan3d__viewport-note" aria-hidden="true">DRAG TO ORBIT <span>·</span> SHIFT + DRAG TO PAN <span>·</span> SCROLL TO ZOOM</div>

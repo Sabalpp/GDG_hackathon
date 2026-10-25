@@ -1,39 +1,38 @@
-﻿import { useEffect, useState } from 'react'
-import { adapterMode, generateProposal, interpretRequest, loadSample, validateLayout } from './api/adaptApi'
+import { useEffect, useState } from 'react'
+import { adapterMode, generateProposal, interpretRequest, loadSample, validateLayout, type InterpretationResponse } from './api/adaptApi'
 import type { Goal } from './contracts'
 import { Plan2D } from './components/Plan2D'
 import { Plan3D } from './components/Plan3D'
-import { ImmersiveWorkspace } from './components/ImmersiveWorkspace'
 import { ResultsPanel } from './components/ResultsPanel'
-import { AppStateProvider, selectActiveFindings, selectActiveLayout, selectAllGoalsConfirmed, useAppDispatch, useAppState, type Stage } from './state/AppState'
+import { AppStateProvider, selectActiveFindings, selectActiveLayout, selectAllGoalsConfirmed, useAppDispatch, useAppState } from './state/AppState'
+import './reference.css'
 
-const stageLabels: Record<Stage, string> = { plan: 'Plan', goals: 'Your goals', review: 'Review proposal' }
 const goalLabels: Record<Goal['type'], string> = {
   'minimum-door-width': 'Minimum doorway width',
-  'minimum-path-width': 'Minimum path width',
+  'minimum-path-width': 'Minimum clear path',
   'reachable-route': 'Reachable route',
 }
-const newGoal = (): Goal => ({ id: `goal-${crypto.randomUUID()}`, type: 'minimum-door-width', targetMm: 850, status: 'draft' })
+const ideas: { icon: string; title: string; description: string; type: Goal['type']; targetMm?: number }[] = [
+  { icon: 'door_front', title: 'Wider doorway', description: 'Set a doorway width goal', type: 'minimum-door-width', targetMm: 850 },
+  { icon: 'straighten', title: 'Clear circulation', description: 'Explore a path width goal', type: 'minimum-path-width', targetMm: 900 },
+  { icon: 'route', title: 'Connected rooms', description: 'Check a route in the model', type: 'reachable-route' },
+]
+const makeGoal = (type: Goal['type'] = 'minimum-door-width', targetMm?: number): Goal => ({ id: `goal-${crypto.randomUUID()}`, type, targetMm, status: 'draft' })
+
+function Symbol({ name }: { name: string }) { return <span className="material-symbols-outlined" aria-hidden="true">{name}</span> }
 
 function GoalEditor({ goal }: { goal: Goal }) {
   const dispatch = useAppDispatch()
   const state = useAppState()
-  const set = (patch: Partial<Goal>) => dispatch({ type: 'edit-goal', value: { ...goal, ...patch } })
-  return <div className="goal-card">
-    <div className="goal-card__top"><span className="goal-index">GOAL {state.goals.findIndex((item) => item.id === goal.id) + 1}</span><span className={`goal-status ${goal.status}`}>{goal.status}</span></div>
-    <label>Goal type
-      <select value={goal.type} onChange={(event) => set({ type: event.target.value as Goal['type'], targetMm: event.target.value === 'reachable-route' ? undefined : goal.targetMm ?? 850 })}>
-        {Object.entries(goalLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-      </select>
-    </label>
-    {goal.type !== 'reachable-route' && <label>Target width <span className="unit">mm</span>
-      <input type="number" min="1" step="10" value={goal.targetMm ?? ''} onChange={(event) => set({ targetMm: event.target.value ? Number(event.target.value) : undefined })} />
-    </label>}
-    {goal.type === 'reachable-route' && <div className="goal-route">
-      <label>From room<select value={goal.fromRoomId ?? ''} onChange={(event) => set({ fromRoomId: event.target.value || undefined })}><option value="">Select room</option>{state.layout?.rooms.map((room) => <option value={room.id} key={room.id}>{room.label}</option>)}</select></label>
-      <label>To room<select value={goal.toRoomId ?? ''} onChange={(event) => set({ toRoomId: event.target.value || undefined })}><option value="">Select room</option>{state.layout?.rooms.map((room) => <option value={room.id} key={room.id}>{room.label}</option>)}</select></label>
-    </div>}
-    <button className="text-button" type="button" onClick={() => dispatch({ type: 'remove-goal', id: goal.id })}>Remove goal</button>
+  const edit = (patch: Partial<Goal>) => dispatch({ type: 'edit-goal', value: { ...goal, ...patch } })
+  return <div className="adapt-goal-card">
+    <div className="adapt-goal-card__head"><strong>{goalLabels[goal.type]}</strong><span>{goal.status}</span></div>
+    <label>Goal type<select value={goal.type} onChange={(event) => edit({ type: event.target.value as Goal['type'], targetMm: event.target.value === 'reachable-route' ? undefined : goal.targetMm ?? 850 })}>{Object.entries(goalLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+    {goal.type === 'reachable-route' ? <div className="adapt-goal-card__route">
+      <label>From room<select value={goal.fromRoomId ?? ''} onChange={(event) => edit({ fromRoomId: event.target.value || undefined })}><option value="">Select a room</option>{state.layout?.rooms.map((room) => <option key={room.id} value={room.id}>{room.label}</option>)}</select></label>
+      <label>To room<select value={goal.toRoomId ?? ''} onChange={(event) => edit({ toRoomId: event.target.value || undefined })}><option value="">Select a room</option>{state.layout?.rooms.map((room) => <option key={room.id} value={room.id}>{room.label}</option>)}</select></label>
+    </div> : <label>Target width (mm)<input type="number" min="1" step="10" value={goal.targetMm ?? ''} onChange={(event) => edit({ targetMm: event.target.value ? Number(event.target.value) : undefined })} /></label>}
+    <button type="button" className="adapt-text-button" onClick={() => dispatch({ type: 'remove-goal', id: goal.id })}>Remove goal</button>
   </div>
 }
 
@@ -43,96 +42,110 @@ function Experience() {
   const [busy, setBusy] = useState<'sample' | 'interpret' | 'validate' | 'generate' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [interpretation, setInterpretation] = useState<InterpretationResponse | null>(null)
+  const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>()
+  const [cameraRequestId, setCameraRequestId] = useState(0)
+  const [zoomRequest, setZoomRequest] = useState<{ direction: 'in' | 'out'; version: number }>()
+  const [fullScreen, setFullScreen] = useState(false)
   const activeLayout = selectActiveLayout(state)
   const activeFindings = selectActiveFindings(state)
   const confirmed = selectAllGoalsConfirmed(state)
-  const validGoals = state.goals.every((goal) => goal.type === 'reachable-route'
+  const validGoals = state.goals.length > 0 && state.goals.every((goal) => goal.type === 'reachable-route'
     ? Boolean(goal.fromRoomId && goal.toRoomId && goal.fromRoomId !== goal.toRoomId)
     : Boolean(goal.targetMm && Number.isFinite(goal.targetMm) && goal.targetMm > 0))
 
   useEffect(() => {
     let cancelled = false
     setBusy('sample')
-    loadSample().then((layout) => {
-      if (!cancelled) dispatch({ type: 'layout', value: layout })
-    }).catch((cause: unknown) => {
-      if (!cancelled) setError(cause instanceof Error ? cause.message : 'The sample could not be loaded.')
-    }).finally(() => { if (!cancelled) setBusy(null) })
+    loadSample().then((layout) => { if (!cancelled) { dispatch({ type: 'layout', value: layout }); dispatch({ type: 'view', value: '3d' }) } })
+      .catch((cause: unknown) => { if (!cancelled) setError(cause instanceof Error ? cause.message : 'The sample could not be loaded.') })
+      .finally(() => { if (!cancelled) setBusy(null) })
     return () => { cancelled = true }
   }, [dispatch])
+  useEffect(() => {
+    if (!fullScreen) return
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setFullScreen(false) }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [fullScreen])
 
-  async function run(kind: 'interpret' | 'validate' | 'generate') {
-    setBusy(kind); setError(null); setNotice(null)
+  function addIdea(type: Goal['type'], targetMm?: number) {
+    dispatch({ type: 'add-goal', value: makeGoal(type, targetMm) })
+    dispatch({ type: 'stage', value: 'goals' })
+    setNotice('Idea added as a draft goal. Review and confirm its target before checking the layout.')
+  }
+  async function interpret() {
+    if (!state.description.trim()) { setError('Describe the change you have in mind first.'); return }
+    setBusy('interpret'); setError(null); setNotice(null)
     try {
-      if (kind === 'interpret') {
-        if (!state.description.trim()) throw new Error('Describe what you would like to change first.')
-        const goals = await interpretRequest(state.description.trim())
-        dispatch({ type: 'replace-draft-goals', value: goals })
-        setNotice('Review and confirm these draft goals before checking the plan.')
-      } else {
-        if (!state.layout) throw new Error('The sample layout is not loaded.')
-        if (!confirmed) throw new Error('Confirm your goals before running the model.')
-        if (kind === 'validate') {
-          dispatch({ type: 'findings', value: await validateLayout(state.layout, state.goals) })
-        } else {
-          dispatch({ type: 'proposal', value: await generateProposal(state.layout, state.goals) })
-        }
-      }
+      const response = await interpretRequest(state.description.trim())
+      setInterpretation(response)
+      dispatch({ type: 'stage', value: 'goals' })
+      setNotice('Interpretation is a draft. Add measurable goals below, then review and confirm them.')
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'This request could not be completed.')
+      setError(cause instanceof Error ? cause.message : 'The interpretation service is unavailable.')
+      dispatch({ type: 'stage', value: 'goals' })
     } finally { setBusy(null) }
   }
+  async function generate() {
+    if (!state.layout) { setError('The sample layout is not available.'); return }
+    if (!confirmed) {
+      if (adapterMode === 'api' && state.description.trim() && !interpretation && state.goals.length === 0) { await interpret(); return }
+      dispatch({ type: 'stage', value: 'goals' })
+      setNotice('Add a measurable goal and confirm it before generating a concept.')
+      return
+    }
+    setBusy('generate'); setError(null); setNotice(null)
+    try {
+      const findings = await validateLayout(state.layout, state.goals)
+      dispatch({ type: 'findings', value: findings })
+      const budget = state.budgetUsd ? Number(state.budgetUsd) : undefined
+      const proposal = await generateProposal(state.layout, state.goals, budget)
+      dispatch({ type: 'proposal', value: proposal })
+      setNotice('Concept generated from confirmed goals. Compare Standard and Adapted, then review the findings.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The concept could not be generated.')
+      dispatch({ type: 'stage', value: 'review' })
+    } finally { setBusy(null) }
+  }
+  async function checkGoals() {
+    if (!state.layout) return
+    setBusy('validate'); setError(null)
+    try { dispatch({ type: 'findings', value: await validateLayout(state.layout, state.goals) }) }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'The model check failed.') }
+    finally { setBusy(null) }
+  }
 
-  return <div className="app-shell">
-    <header className="masthead">
-      <div className="brand" aria-label="ADAPT home"><span className="brand-icon">A</span><span>ADAPT<small>SPACE FOR EVERY BODY</small></span></div>
-      <div className="masthead__right"><span className="edition">Concept planning studio <span>Ãƒâ€šÃ‚Â·</span> 001</span><span className="sample-badge">SAMPLE PROJECT</span></div>
-    </header>
-    <main>
-      <div className="intro">
-        <div><p className="eyebrow">01 / Explore your space</p><h1>A home that<br /><em>works for you.</em></h1></div>
-        <p className="intro__copy">Explore accessibility ideas in a calibrated sample apartment. Set your own goals, inspect model findings, and compare a concept proposal.</p>
-      </div>
-      <nav className="stages" aria-label="Planning stages">
-        {(['plan', 'goals', 'review'] as Stage[]).map((stage, index) => <button key={stage} type="button" className={state.stage === stage ? 'active' : ''} onClick={() => dispatch({ type: 'stage', value: stage })} aria-current={state.stage === stage ? 'step' : undefined}><span>0{index + 1}</span>{stageLabels[stage]}</button>)}
-      </nav>
-      {adapterMode === 'local-demo' && <div className="demo-banner" role="note"><strong>Local sample mode.</strong> Doorway width checks and a bounded doorway concept edit use calibrated demo data. AI interpretation, path measurement, and cost estimates are unavailable.</div>}
-      {error && <div className="message message--error" role="alert">{error}<button type="button" aria-label="Dismiss error" onClick={() => setError(null)}>ÃƒÆ’Ã¢â‚¬â€</button></div>}
-      {notice && <div className="message" role="status">{notice}</div>}
-
-      <div className="workspace">
-        <div className="workspace__visual">
-          <ImmersiveWorkspace
-            layout={activeLayout}
-            proposal={state.proposal}
-            findings={activeFindings}
-            view={state.view}
-            showAfter={state.showAfter}
-            selectedElementId={state.selectedElementId}
-            selectedFindingId={state.selectedFindingId}
-            onViewChange={(view) => dispatch({ type: 'view', value: view })}
-            onShowAfterChange={(value) => dispatch({ type: 'show-after', value })}
-            onSelectElement={(id) => dispatch({ type: 'selected-element', id })}
-            renderer={Plan3D}
-            rendererCapabilities={{ cameraPresets: true, explodedView: true, roomFocus: true, picking: true }}
-            loading={busy === 'sample'}
-            render2D={activeLayout
-              ? <Plan2D layout={activeLayout} findings={activeFindings} selectedElementId={state.selectedElementId} onSelectElement={(id) => dispatch({ type: 'selected-element', id })} mode={state.proposal ? 'before-after' : 'single'} beforeLayout={state.proposal ? state.layout : undefined} beforeFindings={state.proposal ? state.proposal.findingsBefore : undefined} />
-              : <div className="plan-slot" role="status">{busy === 'sample' ? 'Loading sample apartment…' : 'The sample layout is unavailable.'}</div>}
-          />
+  const currentStage = state.stage
+  return <div className="adapt-app">
+    <header className="adapt-header"><div className="adapt-header__inner"><div className="adapt-brand"><strong>ADAPT</strong><i aria-hidden="true" /><span>ACCESSIBLE SPACES</span></div><span className="adapt-level">Level 01</span></div></header>
+    <main className="adapt-main"><div className="adapt-grid">
+      <section className="adapt-workspace" aria-label="Apartment workspace">
+        <div className="adapt-title-row"><div><h1>Living &amp; Bath Suite</h1><p>{state.showAfter && state.proposal ? 'Adapted concept proposal' : 'Standard floor plan'} <span>· Calibrated sample in mm</span></p></div>
+          <div className="adapt-segment" role="group" aria-label="Floor plan mode"><button type="button" aria-pressed={!state.showAfter} onClick={() => dispatch({ type: 'show-after', value: false })}>Standard</button><button type="button" aria-pressed={state.showAfter && !!state.proposal} disabled={!state.proposal} onClick={() => dispatch({ type: 'show-after', value: true })} title={!state.proposal ? 'Generate a concept first' : undefined}>Adapted</button></div></div>
+        <div className={`adapt-model-card${fullScreen ? ' adapt-model-card--fullscreen' : ''}`}>
+          <div className="adapt-model-card__view">{activeLayout ? state.view === '3d' ? <Plan3D layout={activeLayout} findings={activeFindings} selectedRoomId={selectedRoomId} selectedElementId={state.selectedElementId} selectedFindingId={state.selectedFindingId} onSelectRoom={setSelectedRoomId} onSelectElement={(id) => dispatch({ type: 'selected-element', id })} cameraPreset="overview" cameraRequestId={cameraRequestId} focusedRoomId={selectedRoomId} zoomRequest={zoomRequest} onUnavailable={() => dispatch({ type: 'view', value: '2d' })} className="adapt-reference-viewer" /> : <Plan2D layout={activeLayout} findings={activeFindings} selectedElementId={state.selectedElementId} onSelectElement={(id) => dispatch({ type: 'selected-element', id })} mode={state.proposal && state.showAfter ? 'before-after' : 'single'} beforeLayout={state.proposal && state.showAfter ? state.layout : undefined} beforeFindings={state.proposal && state.showAfter ? state.proposal.findingsBefore : undefined} className="adapt-reference-plan2d" /> : <div className="adapt-model-empty" role="status">{busy === 'sample' ? 'Loading sample apartment…' : 'Sample geometry is unavailable.'}</div>}</div>
+          <div className="adapt-camera-controls" role="toolbar" aria-label="Viewer controls">{state.view === '3d' && <><button type="button" aria-label="Zoom in" onClick={() => setZoomRequest((previous) => ({ direction: 'in', version: (previous?.version ?? 0) + 1 }))}><Symbol name="add" /></button><button type="button" aria-label="Zoom out" onClick={() => setZoomRequest((previous) => ({ direction: 'out', version: (previous?.version ?? 0) + 1 }))}><Symbol name="remove" /></button><button type="button" aria-label="Reset camera" onClick={() => setCameraRequestId((id) => id + 1)}><Symbol name="refresh" /></button></>}<button type="button" aria-label={fullScreen ? 'Exit expanded view' : 'Expand viewer'} onClick={() => setFullScreen((value) => !value)}><Symbol name={fullScreen ? 'close_fullscreen' : 'open_in_full'} /></button></div>
+          <div className="adapt-view-tabs" role="group" aria-label="View type"><button type="button" aria-pressed={state.view === '3d'} onClick={() => dispatch({ type: 'view', value: '3d' })}>3D view</button><button type="button" aria-pressed={state.view === '2d'} onClick={() => dispatch({ type: 'view', value: '2d' })}>2D plan</button></div>
+          {state.view === '3d' && <span className="adapt-orbit-hint">Drag to rotate · Pinch or scroll to zoom</span>}
         </div>
-        <button className="workspace__sidebar-toggle" type="button" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}>{sidebarOpen ? 'Hide planning panel' : 'Show planning panel'}</button>
-        <aside className={`side-panel ${sidebarOpen ? '' : 'side-panel--collapsed'}`} aria-label="Planning controls">
-          {state.stage === 'plan' && <div className="panel-content"><p className="eyebrow">Getting started</p><h2>Start with a real question.</h2><p>This sample apartment is ready to explore. Its coordinates and doorway width are specified in millimeters.</p><div className="stat-pair"><div><strong>{state.layout?.rooms.length ?? 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}</strong><span>rooms</span></div><div><strong>{state.layout?.doors.length ?? 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}</strong><span>modeled doorway</span></div></div><button className="primary-button" type="button" onClick={() => dispatch({ type: 'stage', value: 'goals' })}>Set your goals <span>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â€</span></button><p className="fine-print">This is a sample only. Real-home measurements and site conditions are not verified.</p></div>}
-          {state.stage === 'goals' && <div className="panel-content"><p className="eyebrow">Your priorities</p><h2>What would make this space easier?</h2><label className="field-label" htmlFor="description">Describe your needs in your own words</label><textarea id="description" rows={3} placeholder="For example, I need a wider bathroom doorwayÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" value={state.description} onChange={(event) => dispatch({ type: 'description', value: event.target.value })} /><button className="secondary-button" type="button" onClick={() => void run('interpret')} disabled={busy !== null || adapterMode === 'local-demo'}>Interpret request</button>{adapterMode === 'local-demo' && <p className="field-help">AI interpretation is unavailable in local sample mode. Add and edit structured goals manually.</p>}<label className="field-label" htmlFor="budget">Optional planning budget <span>USD</span></label><input id="budget" type="number" min="0" placeholder="e.g. 5000" value={state.budgetUsd} onChange={(event) => dispatch({ type: 'budget', value: event.target.value })} /><p className="field-help">For your reference only; no cost estimate is generated from this entry.</p><div className="goal-heading"><h3>Structured goals</h3><button type="button" className="add-button" onClick={() => dispatch({ type: 'add-goal', value: newGoal() })}>+ Add goal</button></div>{state.goals.length === 0 && <p className="empty-note">No goals yet. Add a structured goal to check the model.</p>}{state.goals.map((goal) => <GoalEditor key={goal.id} goal={goal} />)}{state.goals.length > 0 && <><button className="primary-button" type="button" disabled={!validGoals || confirmed} onClick={() => dispatch({ type: 'confirm-goals' })}>{confirmed ? 'Goals confirmed' : 'Confirm goals'} <span>ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“</span></button><p className="field-help">Editing a goal returns it to draft and clears prior findings.</p></>}{confirmed && <button className="secondary-button full-width" type="button" disabled={busy !== null} onClick={() => void run('validate')}>{busy === 'validate' ? 'CheckingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : 'Check the sample plan'}</button>}</div>}
-          {state.stage === 'review' && <div className="panel-content"><p className="eyebrow">The model check</p><h2>What the plan shows.</h2><ResultsPanel goals={state.goals} findingsBefore={state.findingsBefore} proposal={state.proposal} layout={state.layout} selectedFindingId={state.selectedFindingId} onSelectFinding={(id) => { dispatch({ type: 'selected-finding', id }); const finding = activeFindings?.find((item) => item.id === id); dispatch({ type: 'selected-element', id: finding?.affectedElementIds[0] }) }} />{confirmed && <button className="primary-button" type="button" disabled={busy !== null || !state.layout} onClick={() => void run('generate')}>{busy === 'generate' ? 'PreparingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : state.proposal ? 'Regenerate concept' : 'Explore a concept'} <span>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â€</span></button>}{state.proposal && <p className="field-help">The after view reflects the proposal data. Construction-related edits require qualified professional review.</p>}{!confirmed && <button className="secondary-button full-width" type="button" onClick={() => dispatch({ type: 'stage', value: 'goals' })}>Add and confirm goals</button>}</div>}
-        </aside>
-      </div>
-      <footer className="page-footer"><span>ADAPT / SAMPLE STUDY</span><p>Concept planning only. ADAPT does not determine code compliance, structural safety, medical suitability, construction feasibility, or contractor pricing. Qualified professionals must review construction-related work.</p></footer>
-    </main>
+        <p className="adapt-model-disclosure">Simplified visualization of the supplied layout, not a construction model. Wall heights and finishes are illustrative.</p>
+        <div className="adapt-section-heading"><strong>Select Space</strong><span>{selectedRoomId ? activeLayout?.rooms.find((room) => room.id === selectedRoomId)?.label : 'Suite View'}</span></div>
+        <div className="adapt-room-chips" role="group" aria-label="Select a room"><button type="button" aria-pressed={!selectedRoomId} onClick={() => { setSelectedRoomId(undefined); dispatch({ type: 'selected-element', id: undefined }); setCameraRequestId((id) => id + 1) }}>All Rooms</button>{activeLayout?.rooms.map((room) => <button type="button" key={room.id} aria-pressed={selectedRoomId === room.id} onClick={() => { setSelectedRoomId(room.id); dispatch({ type: 'selected-element', id: room.id }); setCameraRequestId((id) => id + 1) }}>{room.label}</button>)}</div>
+      </section>
+      <aside className="adapt-sidebar" aria-label="Planning controls">
+        <div className="adapt-sidebar__top"><span className="adapt-sidebar__eyebrow">YOUR PLANNING STUDIO</span><h2>{currentStage === 'plan' ? 'A space that fits your life.' : currentStage === 'goals' ? 'Shape your goals.' : 'Review the concept.'}</h2><p>{currentStage === 'plan' ? 'Choose an idea or describe what you need. The calibrated sample is ready to explore.' : currentStage === 'goals' ? 'Set measurable targets and confirm them before the model checks the layout.' : 'See measured outcomes and what remains unknown.'}</p></div>
+        {adapterMode === 'local-demo' && <div className="adapt-local-banner" role="note"><strong>Local sample mode</strong><span>AI interpretation is unavailable. Enter goals manually; the sample door check and concept edit are local.</span></div>}
+        {error && <div className="adapt-message adapt-message--error" role="alert">{error}<button type="button" onClick={() => setError(null)} aria-label="Dismiss error">×</button></div>}
+        {notice && <div className="adapt-message" role="status">{notice}</div>}
+        {currentStage === 'plan' && <div className="adapt-panel-section"><div className="adapt-section-heading"><strong>Key Adaptations</strong><span>Ideas to explore</span></div><div className="adapt-idea-list">{ideas.map((idea) => <button key={idea.title} type="button" className="adapt-idea" onClick={() => addIdea(idea.type, idea.targetMm)}><span className="adapt-idea__icon"><Symbol name={idea.icon} /></span><span className="adapt-idea__copy"><strong>{idea.title}</strong><small>{idea.description}</small></span><span className="adapt-idea__add" aria-hidden="true">+</span></button>)}</div></div>}
+        {currentStage === 'goals' && <div className="adapt-panel-section adapt-goals">{interpretation && <div className="adapt-interpretation"><strong>Draft interpretation</strong><p>These themes are suggestions, not measured layout goals.</p><ul>{interpretation.goals.map((item, index) => <li key={`${item.category}-${index}`}>{item.description} <small>{item.priority} priority{item.room ? ` · ${item.room.replaceAll('_', ' ')}` : ''}</small></li>)}</ul>{interpretation.questions.length > 0 && <p><b>Questions:</b> {interpretation.questions.join(' ')}</p>}{interpretation.warnings.map((warning, index) => <p key={index}>{warning}</p>)}</div>}<div className="adapt-section-heading"><strong>Structured goals</strong><button type="button" onClick={() => dispatch({ type: 'add-goal', value: makeGoal('minimum-door-width', 850) })}>+ Add goal</button></div>{state.goals.length === 0 && <p className="adapt-empty">No measurable goals yet. Add one to check the sample.</p>}{state.goals.map((goal) => <GoalEditor key={goal.id} goal={goal} />)}{state.goals.length > 0 && <button type="button" className="adapt-secondary-action" disabled={!validGoals || confirmed} onClick={() => { dispatch({ type: 'confirm-goals' }); setNotice('Goals confirmed. Run the model check or generate a concept.') }}>{confirmed ? 'Goals confirmed' : 'Confirm goals'}</button>}{confirmed && <button type="button" className="adapt-secondary-action" disabled={busy !== null} onClick={() => void checkGoals()}>{busy === 'validate' ? 'Checking…' : 'Check model findings'}</button>}<p className="adapt-helper">Targets are your planning goals, not legal requirements. Editing a goal returns it to draft.</p></div>}
+        {currentStage === 'review' && <div className="adapt-panel-section adapt-review"><ResultsPanel goals={state.goals} findingsBefore={state.findingsBefore} proposal={state.proposal} layout={state.layout} selectedFindingId={state.selectedFindingId} onSelectFinding={(id) => { dispatch({ type: 'selected-finding', id }); const finding = activeFindings?.find((item) => item.id === id); dispatch({ type: 'selected-element', id: finding?.affectedElementIds[0] }) }} /><button className="adapt-secondary-action" type="button" onClick={() => dispatch({ type: 'stage', value: 'goals' })}>Edit goals</button></div>}
+        <div className="adapt-composer"><label htmlFor="adapt-request">Describe changes to explore</label><textarea id="adapt-request" rows={2} value={state.description} onChange={(event) => dispatch({ type: 'description', value: event.target.value })} placeholder="Describe any specific changes…" /><label className="adapt-budget-label" htmlFor="adapt-budget">Optional budget (USD)</label><input id="adapt-budget" type="number" min="0" value={state.budgetUsd} onChange={(event) => dispatch({ type: 'budget', value: event.target.value })} placeholder="e.g. 12000" /><button type="button" className="adapt-generate" disabled={busy !== null || !state.layout} onClick={() => void generate()}>{busy === 'generate' ? 'Generating concept…' : busy === 'interpret' ? 'Interpreting request…' : 'Generate Redesign'}<Symbol name="arrow_forward" /></button></div>
+      </aside>
+    </div><p className="adapt-limitations">ADAPT creates concept proposals. It does not determine code compliance, structural safety, medical suitability, construction feasibility, or contractor pricing. Qualified professionals must review construction-related work.</p></main>
+    <nav className="adapt-bottom-nav" aria-label="Application sections"><button type="button" aria-current={currentStage === 'plan' ? 'page' : undefined} onClick={() => dispatch({ type: 'stage', value: 'plan' })}><Symbol name="home_work" /><span>Spaces</span></button><button type="button" aria-current={currentStage === 'goals' ? 'page' : undefined} onClick={() => dispatch({ type: 'stage', value: 'goals' })}><Symbol name="tune" /><span>Goals</span></button><button type="button" aria-current={currentStage === 'review' ? 'page' : undefined} onClick={() => dispatch({ type: 'stage', value: 'review' })}><Symbol name="fact_check" /><span>Review</span></button></nav>
   </div>
 }
 
 export function App() { return <AppStateProvider><Experience /></AppStateProvider> }
-

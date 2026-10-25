@@ -19,10 +19,11 @@ export type Plan3DSceneProps = {
   onSelectRoom: (id: string) => void;
   onSelectElement: (id: string) => void;
   cameraCommand: CameraCommand;
+  zoomRequest?: { direction: 'in' | 'out'; version: number };
 };
 
-const WALL_HEIGHT = 2.55; // Presentation height; the layout specifies only 2D walls.
-const floorColors = ['#d8caba', '#d8d2c5', '#c7d2c9', '#d6ccc1'];
+const WALL_HEIGHT = 0.95; // Reference-style cutaway height; layout stores only 2D walls.
+const floorColors = ['#d8c2a5', '#d6dedb', '#e0e2de', '#c8b297'];
 const verdictColors: Record<Verdict, string> = { pass: '#59c7ab', fail: '#e59076', unknown: '#d6bd8b' };
 
 function pointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
@@ -92,15 +93,15 @@ function WallPiece({ start, end, thickness, center, muted, accent }: {
   return <group position={[(x1 + x2) / 2, 0, (z1 + z2) / 2]} rotation={[0, angle, 0]}>
     <mesh position={[0, WALL_HEIGHT / 2, 0]} castShadow receiveShadow>
       <boxGeometry args={[length, WALL_HEIGHT, mmToMeters(thickness)]} />
-      <meshStandardMaterial color={accent ? '#b8d8ce' : '#eee9df'} roughness={0.86} metalness={0.02} transparent opacity={muted ? 0.46 : 1} />
+      <meshStandardMaterial color={accent ? '#c7e1d0' : '#ffffff'} roughness={0.9} metalness={0} transparent opacity={muted ? 0.46 : 1} />
     </mesh>
     <mesh position={[0, WALL_HEIGHT - 0.025, 0]} castShadow>
       <boxGeometry args={[length, 0.05, mmToMeters(thickness) + 0.012]} />
-      <meshStandardMaterial color="#b4b9ad" roughness={0.67} metalness={0.08} transparent opacity={muted ? 0.46 : 1} />
+      <meshStandardMaterial color="#24523b" roughness={0.45} metalness={0} transparent opacity={muted ? 0.46 : 1} />
     </mesh>
     <mesh position={[0, 0.075, mmToMeters(thickness) / 2 + 0.012]}>
       <boxGeometry args={[length, 0.15, 0.02]} />
-      <meshStandardMaterial color="#d6d1c7" roughness={0.8} transparent opacity={muted ? 0.46 : 1} />
+      <meshStandardMaterial color="#eeeae1" roughness={0.8} transparent opacity={muted ? 0.46 : 1} />
     </mesh>
   </group>;
 }
@@ -127,17 +128,13 @@ function WallAssembly({ wall, doors, center, selectedElementId, linkedIds, onSel
           <boxGeometry args={[width, 0.035, mmToMeters(wall.thickness) + 0.08]} />
           <meshStandardMaterial color={doorAccent ? '#59c7ab' : '#ae8060'} roughness={0.58} metalness={0.1} emissive={doorAccent ? '#1b796b' : '#000000'} emissiveIntensity={doorAccent ? 0.35 : 0} />
         </mesh>
-        {[-1, 1].map((side) => <mesh key={side} position={[side * width / 2, 1.02, 0]} castShadow>
-          <boxGeometry args={[0.035, 2.04, mmToMeters(wall.thickness) + 0.04]} />
-          <meshStandardMaterial color="#687973" metalness={0.25} roughness={0.5} />
+        {[-1, 1].map((side) => <mesh key={side} position={[side * width / 2, WALL_HEIGHT / 2, 0]} castShadow>
+          <boxGeometry args={[0.035, WALL_HEIGHT, mmToMeters(wall.thickness) + 0.04]} />
+          <meshStandardMaterial color="#8a6d4c" metalness={0.12} roughness={0.55} />
         </mesh>)}
-        <mesh position={[0, 2.05, 0]} castShadow>
+        <mesh position={[0, WALL_HEIGHT + 0.02, 0]} castShadow>
           <boxGeometry args={[width + 0.07, 0.035, mmToMeters(wall.thickness) + 0.04]} />
-          <meshStandardMaterial color="#687973" metalness={0.25} roughness={0.5} />
-        </mesh>
-        <mesh position={[0, (2.08 + WALL_HEIGHT) / 2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[width, WALL_HEIGHT - 2.08, mmToMeters(wall.thickness)]} />
-          <meshStandardMaterial color="#eee9df" roughness={0.86} />
+          <meshStandardMaterial color="#24523b" metalness={0} roughness={0.45} />
         </mesh>
       </group>;
     })}
@@ -158,8 +155,8 @@ function ObjectAssembly({ object, center, selected, dimmed, linked, onSelect, on
   const isCounter = name.includes('counter') || name.includes('cabinet');
   const isBath = name.includes('bath') || name.includes('sink');
   const top = object.kind === 'fixture' ? 0.78 : isBed ? 0.46 : 0.57;
-  const baseColor = selected || linked ? '#67baa7' : object.kind === 'fixture' ? '#8d9b96' : '#99735f';
-  const detailColor = object.kind === 'fixture' ? '#d5dfdb' : '#e9ddca';
+  const baseColor = selected || linked ? '#69aa8b' : object.kind === 'fixture' ? '#f3f4f0' : isBed ? '#3d5449' : isSofa ? '#485a50' : '#8a6d4c';
+  const detailColor = object.kind === 'fixture' ? '#fcfcfc' : '#8ea095';
   const opacity = dimmed ? 0.35 : 1;
   const material = <meshStandardMaterial color={baseColor} roughness={0.76} metalness={0.04} transparent opacity={opacity} emissive={selected ? '#1a705e' : '#000000'} emissiveIntensity={selected ? 0.2 : 0} />;
   return <group name={object.id} position={[sceneX, 0, sceneZ]}
@@ -269,7 +266,7 @@ function ApartmentLayers({ layout, bounds, exploded, selectedRoomId, selectedEle
   </>;
 }
 
-function CameraRig({ bounds, layout, command, exploded }: { bounds: Bounds; layout: Layout; command: CameraCommand; exploded: boolean }) {
+function CameraRig({ bounds, layout, command, exploded, zoomRequest }: { bounds: Bounds; layout: Layout; command: CameraCommand; exploded: boolean; zoomRequest?: Plan3DSceneProps['zoomRequest'] }) {
   const { camera, size } = useThree();
   const controls = useRef<OrbitControlsImpl>(null);
   const goalPosition = useRef(new Vector3());
@@ -307,6 +304,14 @@ function CameraRig({ bounds, layout, command, exploded }: { bounds: Bounds; layo
     }
     moving.current = true;
   }, [bounds, layout.rooms, command, exploded, camera, size.width, size.height]);
+  useEffect(() => {
+    if (!zoomRequest || !controls.current) return;
+    moving.current = false;
+    const target = controls.current.target;
+    const offset = camera.position.clone().sub(target).multiplyScalar(zoomRequest.direction === 'in' ? 0.78 : 1.28);
+    camera.position.copy(target).add(offset);
+    controls.current.update();
+  }, [camera, zoomRequest?.version]);
   useFrame((_, delta) => {
     if (!moving.current || !controls.current) return;
     const amount = 1 - Math.exp(-4.5 * delta);
@@ -324,36 +329,35 @@ function StudioScene(props: Plan3DSceneProps) {
   const width = mmToMeters(bounds.maxX - bounds.minX);
   const depth = mmToMeters(bounds.maxY - bounds.minY);
   return <>
-    <color attach="background" args={['#242d31']} />
-    <fog attach="fog" args={['#242d31', 18, 52]} />
-    <ambientLight intensity={0.55} color="#e6eee9" />
-    <hemisphereLight args={['#d8e8e4', '#29312f', 1.1]} />
-    <directionalLight position={[-7, 13, 8]} intensity={2.4} color="#fff1dc" castShadow
+    <color attach="background" args={['#f6f7f5']} />
+    <ambientLight intensity={0.95} color="#ffffff" />
+    <hemisphereLight args={['#edf4f8', '#e2e9dc', 0.55]} />
+    <directionalLight position={[14, 22, 12]} intensity={1.25} color="#fff8ee" castShadow
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-14} shadow-camera-right={14}
       shadow-camera-top={14} shadow-camera-bottom={-14} shadow-normalBias={0.025} shadow-bias={-0.00015} />
-    <directionalLight position={[9, 7, -7]} intensity={0.75} color="#8eaea9" />
+    <directionalLight position={[-9, 8, -7]} intensity={0.28} color="#d5e8db" />
     <mesh position={[0, -0.16, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[200, 200]} />
-      <meshStandardMaterial color="#263136" roughness={0.93} metalness={0.07} />
+      <meshStandardMaterial color="#f1f3ee" roughness={0.98} metalness={0} />
     </mesh>
-    <Grid position={[0, -0.151, 0]} args={[80, 80]} cellSize={1} cellThickness={0.45} cellColor="#43535a"
-      sectionSize={5} sectionThickness={0.8} sectionColor="#526067" fadeDistance={28} fadeStrength={1.5} infiniteGrid />
+    <Grid position={[0, -0.151, 0]} args={[80, 80]} cellSize={1} cellThickness={0.35} cellColor="#dde5db"
+      sectionSize={5} sectionThickness={0.6} sectionColor="#cdd9ca" fadeDistance={28} fadeStrength={1.5} infiniteGrid />
     <mesh position={[0, -0.095, 0]} receiveShadow castShadow>
       <boxGeometry args={[width + 0.36, 0.18, depth + 0.36]} />
-      <meshStandardMaterial color="#586760" roughness={0.78} metalness={0.12} />
+      <meshStandardMaterial color="#e5e8e2" roughness={0.78} metalness={0.02} />
     </mesh>
     <mesh position={[0, -0.19, 0]} receiveShadow>
       <boxGeometry args={[width + 0.58, 0.035, depth + 0.58]} />
-      <meshStandardMaterial color="#82938b" metalness={0.3} roughness={0.54} />
+      <meshStandardMaterial color="#d9dfd7" metalness={0.03} roughness={0.7} />
     </mesh>
     <ApartmentLayers {...props} />
-    <CameraRig bounds={bounds} layout={layout} command={props.cameraCommand} exploded={props.exploded} />
+    <CameraRig bounds={bounds} layout={layout} command={props.cameraCommand} exploded={props.exploded} zoomRequest={props.zoomRequest} />
   </>;
 }
 
 export function Plan3DCanvas(props: Plan3DSceneProps & { onContextLost?: () => void }) {
   return <Canvas shadows={{ type: PCFSoftShadowMap }} dpr={[1, 1.75]}
-    camera={{ fov: 50, position: [8, 12, 8] }} gl={{ antialias: true, powerPreference: 'high-performance' }}
+    camera={{ fov: 34, position: [8, 12, 8] }} gl={{ antialias: true, powerPreference: 'high-performance' }}
     onCreated={({ gl }) => gl.domElement.addEventListener('webglcontextlost', () => props.onContextLost?.(), { once: true })}>
     <StudioScene {...props} />
   </Canvas>;
