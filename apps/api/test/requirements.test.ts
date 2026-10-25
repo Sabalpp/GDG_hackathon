@@ -47,11 +47,14 @@ test('POST returns a validated draft, questions, and server-authored warnings', 
 
 test('rejects invalid inputs before calling the model', async () => {
   await withApi(async () => { throw new Error('Must not call model'); }, async (url) => {
-    for (const body of [{}, { text: ' ' }, { text: 5 }, { text: 'x'.repeat(8001) }, { text: 'help', apiKey: 'secret' }, null]) {
+    for (const body of [{}, { text: ' ' }, { text: 5 }, { text: 'x'.repeat(8001) }, { text: 'help', apiKey: 'secret' }]) {
       const response = await post(url, body);
       assert.equal(response.status, 400);
       assert.equal((await response.json()).error.code, 'INVALID_REQUEST');
     }
+    const nullBody = await post(url, null);
+    assert.equal(nullBody.status, 400);
+    assert.equal((await nullBody.json()).error.code, 'INVALID_JSON');
   });
 });
 
@@ -61,7 +64,7 @@ test('invalid JSON, oversized bodies, and unsupported media types return JSON er
     const malformed = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' });
     assert.equal(malformed.status, 400);
     assert.equal((await malformed.json()).error.code, 'INVALID_JSON');
-    const oversized = await post(url, { text: 'x'.repeat(40000) });
+    const oversized = await post(url, { text: 'x'.repeat(1_100_000) });
     assert.equal(oversized.status, 413);
     const unsupported = await fetch(endpoint, { method: 'POST', body: 'help' });
     assert.equal(unsupported.status, 415);

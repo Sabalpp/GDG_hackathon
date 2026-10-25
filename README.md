@@ -58,8 +58,12 @@ Requires Node 20+ and Python 3.11+. Run every `npm` command from the **repositor
 git clone https://github.com/Sabalpp/GDG_hackathon.git
 cd GDG_hackathon
 npm install
-cp .env.example apps/api/.env          # then put your Gemini key in apps/api/.env
 ```
+
+For AI interpretation, copy `apps/api/.env.example` to `apps/api/.env` and set
+`GEMINI_API_KEY`. For local frontend-to-API requests, create the repository-root
+`.env.local` with `VITE_API_BASE_URL=http://localhost:8080/api/v1`. Without an
+API URL, the frontend stays in labeled local sample mode.
 
 Start the three services in separate terminals:
 
@@ -78,8 +82,8 @@ npm run dev --workspace apps/api
 ```
 
 ```bash
-# 3. Web
-npm run dev --workspace apps/web       # http://localhost:5173
+# 3. Web frontend
+npm run dev --workspace apps/web      # http://localhost:5173
 ```
 
 No Python? Run the geometry service in Docker instead:

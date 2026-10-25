@@ -36,7 +36,7 @@ jobs:
       - run: npm run build --workspace apps/web
         env:
           VITE_API_BASE_URL: /api/v1
-      - run: npm test --workspace apps/web --if-present -- --run
+      - run: npm test --workspace apps/web --if-present
       - name: No secrets in the browser bundle
         run: node scripts/check-bundle-secrets.mjs apps/web/dist
 

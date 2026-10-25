@@ -10,7 +10,9 @@ htmlcov/
 !.env.example
 .DS_Store
 node_modules/
+.env.local
 dist/
 build/
+.vite/
 *.tsbuildinfo
 *.egg-info/
